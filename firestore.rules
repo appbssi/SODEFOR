@@ -1,51 +1,47 @@
 /**
  * @file Firestore Security Rules
- * @core_philosophy This ruleset enforces a basic security model where any authenticated user can read and write data.
- * It assumes a prototyping phase where data validation is relaxed, and the focus is on quickly enabling app functionality.
- * @data_structure The data is organized into two top-level collections: `personnel` and `attendance`.
- * @key_security_decisions Public read access is granted for all collections to facilitate initial development.
- * Write access is restricted to authenticated users but lacks fine-grained authorization (e.g., ownership checks).
+ * @description This ruleset enforces a public read policy for attendance and personnel data, while restricting write access.
+ *
+ * Data Structure:
+ * - /personnel/{personnelId}: Stores personnel information.
+ * - /attendance/{attendanceId}: Stores attendance records.
+ *
+ * Key Security Decisions:
+ * - Public Read Access: Both 'personnel' and 'attendance' collections are publicly readable.
+ * - No Write Access: All write operations (create, update, delete) are explicitly denied. This ensures that only backend processes can modify the data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows any authenticated user to read and write personnel data.
+     * @description Allows public read access to personnel data.
      * @path /personnel/{personnelId}
-     * @allow (read) Any authenticated user can read personnel data.
-     * @deny (write) Unauthenticated users cannot write personnel data.
-     * @principle Authenticated users can create, update, and delete personnel data.
+     * @allow (get, list) Any user can read personnel data.
+     * @deny (create, update, delete) No user can create, update, or delete personnel data.
+     * @principle Allows public read access to the personnel collection and restricts write access.
      */
     match /personnel/{personnelId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
 
     /**
-     * @description Allows any authenticated user to read and write attendance data.
+     * @description Allows public read access to attendance data.
      * @path /attendance/{attendanceId}
-     * @allow (read) Any authenticated user can read attendance data.
-     * @deny (write) Unauthenticated users cannot write attendance data.
-     * @principle Authenticated users can create, update, and delete attendance data.
+     * @allow (get, list) Any user can read attendance data.
+     * @deny (create, update, delete) No user can create, update, or delete attendance data.
+     * @principle Allows public read access to the attendance collection and restricts write access.
      */
     match /attendance/{attendanceId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if isSignedIn();
-    }
-
-    /**
-     * @description Defines a function to check if a user is signed in.
-     * @return True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
+      allow get: if true;
+      allow list: if true;
+      allow create: if false;
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }
