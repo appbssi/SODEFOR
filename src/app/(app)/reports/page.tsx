@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   Card,
   CardContent,
@@ -26,8 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDaysInMonth, format, startOfMonth } from 'date-fns';
+import { getDaysInMonth, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import { useToast } from '@/hooks/use-toast';
+import { Download } from 'lucide-react';
 
 const statusIcons: { [key in AttendanceStatus]: string } = {
   present: '✔️',
@@ -45,9 +49,13 @@ const statusTooltips: { [key in AttendanceStatus]: string } = {
 
 export default function ReportsPage() {
   const { personnel, attendance } = useApp();
+  const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [reportData, setReportData] = useState<any[]>([]);
   const [daysOfMonth, setDaysOfMonth] = useState<Date[]>([]);
+  const [isExporting, setIsExporting] = useState(false);
+  const reportTableRef = useRef<HTMLDivElement>(null);
+
 
   const handleGenerateReport = () => {
     const year = parseInt(selectedMonth.split('-')[0]);
@@ -71,6 +79,67 @@ export default function ReportsPage() {
       return { ...person, attendance: personAttendance };
     });
     setReportData(data);
+  };
+  
+  const handleExportPDF = async () => {
+    if (!reportTableRef.current || reportData.length === 0) {
+      toast({
+        title: 'Aucun rapport à exporter',
+        description: 'Veuillez d\'abord générer un rapport.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    
+    setIsExporting(true);
+
+    try {
+        const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
+        const imgData = canvas.toDataURL('image/png');
+        
+        const pdf = new jsPDF({
+            orientation: 'landscape',
+            unit: 'mm',
+            format: 'a4',
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgWidth / imgHeight;
+        
+        let finalImgWidth = pdfWidth;
+        let finalImgHeight = pdfWidth / ratio;
+        
+        if (finalImgHeight > pdfHeight) {
+            finalImgHeight = pdfHeight;
+            finalImgWidth = pdfHeight * ratio;
+        }
+
+        const x = (pdfWidth - finalImgWidth) / 2;
+        const y = (pdfHeight - finalImgHeight) / 2;
+
+        pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
+        
+        const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Rapport';
+        pdf.save(`rapport_${monthLabel.replace(' ', '_')}.pdf`);
+        
+        toast({
+            title: 'Exportation réussie',
+            description: 'Le rapport a été téléchargé en PDF.',
+        });
+
+    } catch (error) {
+        console.error("Error exporting to PDF:", error);
+        toast({
+            title: 'Erreur d\'exportation',
+            description: 'Une erreur est survenue lors de la création du PDF.',
+            variant: 'destructive',
+        });
+    } finally {
+        setIsExporting(false);
+    }
   };
   
   const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => {
@@ -105,10 +174,14 @@ export default function ReportsPage() {
             </SelectContent>
           </Select>
           <Button onClick={handleGenerateReport} className="w-full sm:w-auto">Générer le rapport</Button>
+          <Button onClick={handleExportPDF} variant="outline" className="w-full sm:w-auto gap-2" disabled={isExporting || reportData.length === 0}>
+            <Download className="h-4 w-4" />
+            {isExporting ? 'Exportation...' : 'Exporter en PDF'}
+          </Button>
         </div>
 
         {reportData.length > 0 ? (
-          <div className="overflow-x-auto relative border rounded-lg">
+          <div ref={reportTableRef} id="report-table" className="overflow-x-auto relative border rounded-lg bg-card">
             <Table>
               <TableHeader>
                 <TableRow>
