@@ -1,5 +1,5 @@
 export interface Personnel {
-  id: string; // Matricule
+  id: string;
   firstName: string;
   lastName: string;
   rank: string;
@@ -11,6 +11,7 @@ export interface Personnel {
 export type AttendanceStatus = 'present' | 'absent' | 'mission' | 'permission';
 
 export interface AttendanceRecord {
+  id?: string; // Firestore document ID
   personnelId: string;
   date: string; // YYYY-MM-DD
   status: AttendanceStatus;

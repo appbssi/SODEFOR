@@ -1,5 +1,8 @@
 import type { Personnel, AttendanceRecord } from '@/types';
 
+// This file now serves as a source for initial data for a fresh DB, or as a reference.
+// The live data will be managed by Firebase.
+
 export const initialPersonnel: Personnel[] = [
   {
     id: '001',

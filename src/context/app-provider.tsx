@@ -1,47 +1,79 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useState } from 'react';
+import { createContext, useContext, useMemo } from 'react';
 import type { Personnel, AttendanceRecord } from '@/types';
-import { initialPersonnel, initialAttendance } from '@/lib/data';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection, doc, where, query } from 'firebase/firestore';
+import {
+  addDocumentNonBlocking,
+  setDocumentNonBlocking,
+} from '@/firebase/non-blocking-updates';
 
 interface AppContextType {
   personnel: Personnel[];
   attendance: AttendanceRecord[];
-  addPersonnel: (person: Omit<Personnel, 'id' | 'matricule'>) => void;
-  updateAttendance: (record: AttendanceRecord) => void;
+  addPersonnel: (person: Omit<Personnel, 'id'>) => void;
+  updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
+  loading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [personnel, setPersonnel] = useState<Personnel[]>(initialPersonnel);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(initialAttendance);
+  const firestore = useFirestore();
 
-  const addPersonnel = (person: Omit<Personnel, 'id' | 'matricule'>) => {
-    const newId = (Math.max(...personnel.map(p => parseInt(p.id, 10)), 0) + 1).toString().padStart(3, '0');
-    const newPerson: Personnel = { ...person, id: newId };
-    setPersonnel(prev => [...prev, newPerson]);
-    
-    // Also add a default attendance record for today
-    const today = new Date().toISOString().split('T')[0];
-    updateAttendance({ personnelId: newId, date: today, status: 'present' });
+  const personnelQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'personnel');
+  }, [firestore]);
+
+  const { data: personnelData, isLoading: personnelLoading } = useCollection<Personnel>(personnelQuery);
+  const personnel = personnelData || [];
+
+  const today = new Date().toISOString().split('T')[0];
+  const attendanceQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    // For simplicity and to avoid complex queries initially, we fetch all attendance.
+    // In a larger app, you might query by month or another range.
+    return collection(firestore, 'attendance');
+  }, [firestore]);
+
+  const { data: attendanceData, isLoading: attendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  const attendance = attendanceData || [];
+
+  const addPersonnel = (person: Omit<Personnel, 'id'>) => {
+    if (!firestore) return;
+    const personnelCollection = collection(firestore, 'personnel');
+    addDocumentNonBlocking(personnelCollection, person)
+      .then((docRef) => {
+        // After adding personnel, add a default attendance record for today.
+        const newPersonnelId = docRef.id;
+        const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelId}_${today}`);
+        const newRecord = {
+          personnelId: newPersonnelId,
+          date: today,
+          status: 'present' as const,
+        };
+        setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
+      });
   };
 
-  const updateAttendance = (record: AttendanceRecord) => {
-    setAttendance(prev => {
-      const existingRecordIndex = prev.findIndex(
-        r => r.personnelId === record.personnelId && r.date === record.date
-      );
-      if (existingRecordIndex !== -1) {
-        const newAttendance = [...prev];
-        newAttendance[existingRecordIndex] = record;
-        return newAttendance;
-      }
-      return [...prev, record];
-    });
+  const updateAttendance = (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => {
+    if (!firestore) return;
+    const attendanceId = `${record.personnelId}_${record.date}`;
+    const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+
+    const fullRecord: AttendanceRecord = {
+      personnelId: record.personnelId,
+      date: record.date,
+      status: record.status || 'present', // default to present if not provided
+      ...record,
+    };
+
+    setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
 
   const getAttendanceForDate = (date: string) => {
@@ -52,8 +84,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return personnel.find(p => p.id === id);
   };
 
+  const loading = personnelLoading || attendanceLoading;
+
+  const value = {
+    personnel,
+    attendance,
+    addPersonnel,
+    updateAttendance,
+    getAttendanceForDate,
+    getPersonnelById,
+    loading,
+  };
+
   return (
-    <AppContext.Provider value={{ personnel, attendance, addPersonnel, updateAttendance, getAttendanceForDate, getPersonnelById }}>
+    <AppContext.Provider value={value}>
       {children}
     </AppContext.Provider>
   );

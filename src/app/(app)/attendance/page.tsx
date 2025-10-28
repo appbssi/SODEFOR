@@ -40,6 +40,8 @@ import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
@@ -56,7 +58,7 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
 };
 
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById } = useApp();
+  const { personnel, attendance, updateAttendance, getPersonnelById, loading } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
@@ -136,7 +138,16 @@ export default function AttendancePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {personnel.map((person) => {
+              {loading ? (
+                Array.from({length: 5}).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-10 w-[180px] float-right" /></TableCell>
+                  </TableRow>
+                ))
+              ) : personnel.map((person) => {
                 const currentStatusRecord = getStatusForPersonnel(person.id);
                 return (
                   <TableRow key={person.id}>
