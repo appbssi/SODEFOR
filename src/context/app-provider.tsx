@@ -1,10 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useMemo } from 'react';
+import { createContext, useContext } from 'react';
 import type { Personnel, AttendanceRecord } from '@/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, where, query } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
@@ -14,6 +14,7 @@ interface AppContextType {
   personnel: Personnel[];
   attendance: AttendanceRecord[];
   addPersonnel: (person: Omit<Personnel, 'id'>) => void;
+  addMultiplePersonnel: (personnelList: Omit<Personnel, 'id'>[]) => Promise<void>;
   updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
@@ -49,6 +50,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const personnelCollection = collection(firestore, 'personnel');
     addDocumentNonBlocking(personnelCollection, person)
       .then((docRef) => {
+        if(!docRef) return;
         // After adding personnel, add a default attendance record for today.
         const newPersonnelId = docRef.id;
         const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelId}_${today}`);
@@ -59,6 +61,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
         };
         setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
       });
+  };
+
+  const addMultiplePersonnel = async (personnelList: Omit<Personnel, 'id'>[]) => {
+    if (!firestore) return;
+    const batch = writeBatch(firestore);
+    const personnelCollection = collection(firestore, 'personnel');
+    
+    personnelList.forEach(person => {
+        const newPersonnelRef = doc(personnelCollection);
+        batch.set(newPersonnelRef, person);
+        
+        // Also create a default 'present' attendance record for today
+        const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelRef.id}_${today}`);
+        const newRecord = {
+          personnelId: newPersonnelRef.id,
+          date: today,
+          status: 'present' as const,
+        };
+        batch.set(attendanceDocRef, newRecord, { merge: true });
+    });
+
+    await batch.commit();
   };
 
   const updateAttendance = (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => {
@@ -86,10 +110,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const loading = personnelLoading || attendanceLoading;
 
-  const value = {
+  const value: AppContextType = {
     personnel,
     attendance,
     addPersonnel,
+    addMultiplePersonnel,
     updateAttendance,
     getAttendanceForDate,
     getPersonnelById,

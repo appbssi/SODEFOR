@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -21,72 +21,86 @@ import {
 import { useApp } from '@/context/app-provider';
 import type { Personnel } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useState } from 'react';
+import { PersonnelImportDialog } from '@/components/personnel-import-dialog';
 
 export default function PersonnelPage() {
   const { personnel, loading } = useApp();
+  const [isImporting, setIsImporting] = useState(false);
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle>Liste du Personnel</CardTitle>
-            <CardDescription>
-              Gérer le personnel et voir leurs informations.
-            </CardDescription>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Liste du Personnel</CardTitle>
+              <CardDescription>
+                Gérer le personnel et voir leurs informations.
+              </CardDescription>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button onClick={() => setIsImporting(true)} variant="outline" size="sm" className="gap-1">
+                <Upload className="h-4 w-4" />
+                <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                  Importer
+                </span>
+              </Button>
+              <Button asChild size="sm" className="gap-1">
+                <Link href="/personnel/new">
+                  <PlusCircle className="h-4 w-4" />
+                  <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
+                    Nouveau Personnel
+                  </span>
+                </Link>
+              </Button>
+            </div>
           </div>
-          <Button asChild size="sm" className="gap-1">
-            <Link href="/personnel/new">
-              <PlusCircle className="h-4 w-4" />
-              <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
-                Nouveau Personnel
-              </span>
-            </Link>
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="hidden w-[100px] sm:table-cell">
-                <span className="sr-only">Avatar</span>
-              </TableHead>
-              <TableHead>Nom Complet</TableHead>
-              <TableHead>Grade</TableHead>
-              <TableHead>Contact</TableHead>
-              <TableHead className="hidden md:table-cell">Email</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              Array.from({ length: 5 }).map((_, i) => (
-                <TableRow key={i}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-10 w-10 rounded-full" />
-                  </TableCell>
-                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
-                  <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
-                </TableRow>
-              ))
-            ) : personnel.map((person: Personnel) => (
-              <TableRow key={person.id}>
-                <TableCell className="hidden sm:table-cell">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-bold">
-                    {person.firstName.charAt(0)}{person.lastName.charAt(0)}
-                  </div>
-                </TableCell>
-                <TableCell>{person.firstName} {person.lastName}</TableCell>
-                <TableCell>{person.rank}</TableCell>
-                <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
-                <TableCell className="hidden md:table-cell">{person.email}</TableCell>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="hidden w-[100px] sm:table-cell">
+                  <span className="sr-only">Avatar</span>
+                </TableHead>
+                <TableHead>Nom Complet</TableHead>
+                <TableHead>Grade</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead className="hidden md:table-cell">Email</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </CardContent>
-    </Card>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i}>
+                    <TableCell className="hidden sm:table-cell">
+                      <Skeleton className="h-10 w-10 rounded-full" />
+                    </TableCell>
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
+                  </TableRow>
+                ))
+              ) : personnel.map((person: Personnel) => (
+                <TableRow key={person.id}>
+                  <TableCell className="hidden sm:table-cell">
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-bold">
+                      {person.firstName.charAt(0)}{person.lastName.charAt(0)}
+                    </div>
+                  </TableCell>
+                  <TableCell>{person.firstName} {person.lastName}</TableCell>
+                  <TableCell>{person.rank}</TableCell>
+                  <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
+                  <TableCell className="hidden md:table-cell">{person.email}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+      <PersonnelImportDialog open={isImporting} onOpenChange={setIsImporting} />
+    </>
   );
 }
