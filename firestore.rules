@@ -1,45 +1,75 @@
 /**
- * @fileOverview Firestore Security Rules for the application.
+ * @fileOverview Firestore Security Rules for Personnel and Attendance Tracking.
  *
  * Core Philosophy:
- * This ruleset provides open read access to all data, but restricts write access.
- * Currently, all write operations are denied, reflecting a read-only state.
- * As the application evolves, write rules must be added to specific collections based on authentication and authorization requirements.
+ * This ruleset adopts a public read, owner-write model for personnel data. Attendance records have open reads and writes for now.
  *
  * Data Structure:
- * - /personnel/{personnelId}: Stores information about personnel members.
- * - /attendance/{attendanceId}: Stores attendance records, with IDs as composites of personnelId and date.
+ * - /personnel/{personnelId}: Stores personnel information.
+ * - /attendance/{attendanceId}: Stores attendance records.
  *
  * Key Security Decisions:
- * - No write access is granted in the current ruleset.
- * - Read access is open to all users.
+ * - Personnel data is publicly readable.
+ * - Personnel data can be created by any authenticated user, but they MUST set the document ID to match their UID.
+ * - Personnel data can only be updated/deleted by the user who created it.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Grants read access to personnel data, but denies all write access.
+     * @description Controls access to the /personnel collection. Allows public reads. Requires the authenticated user to own the data to create, update, or delete.
      * @path /personnel/{personnelId}
-     * @allow (get, list) Any user can read personnel information.
-     * @deny (create, update, delete) No user can create, update, or delete personnel information.
-     * @principle Open read access, restricted write access.
+     * @allow (get, list): Any user can read personnel data.
+     * @allow (create): An authenticated user with a matching personnelId.
+     * @allow (update, delete): The authenticated user who created the personnel record.
+     * @deny (create): An unauthenticated user.
+     * @deny (update, delete): Another authenticated user, or an unauthenticated user.
+     * @principle Public read, owner-only write for personnel data.
      */
     match /personnel/{personnelId} {
       allow get, list: if true;
-      allow create, update, delete: if false;
+      allow create: if isSignedIn() && request.auth.uid == personnelId;
+      allow update, delete: if isExistingOwner(personnelId);
     }
 
     /**
-     * @description Grants read access to attendance records, but denies all write access.
+     * @description Controls access to the /attendance collection. Allows any authenticated user to read, write, create, update, or delete attendance records.
      * @path /attendance/{attendanceId}
-     * @allow (get, list) Any user can read attendance records.
-     * @deny (create, update, delete) No user can create, update, or delete attendance records.
-     * @principle Open read access, restricted write access.
+     * @allow (get, list, create, update, delete): Any authenticated user.
+     * @deny (get, list, create, update, delete): User is not signed in.
+     * @principle Open access for prototyping purposes.
      */
     match /attendance/{attendanceId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+      allow get, list, create, update, delete: if isSignedIn();
+    }
+
+    // Helper functions
+
+    /**
+     * @description Checks if the user is signed in.
+     * @returns {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the document.
+     * @param {string} userId - The user ID to check against the document's ID.
+     * @returns {boolean} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the user is the existing owner of the document and the document exists.
+     * @param {string} userId - The user ID to check against the document's ID.
+     * @returns {boolean} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isSignedIn() && isOwner(userId) && resource != null;
     }
   }
 }
