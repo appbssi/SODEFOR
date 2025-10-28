@@ -5,6 +5,10 @@
       "type": "object",
       "description": "Represents a member of the personnel.",
       "properties": {
+        "matricule": {
+          "type": "string",
+          "description": "Matricule of the personnel."
+        },
         "firstName": {
           "type": "string",
           "description": "First name of the personnel."
@@ -32,6 +36,7 @@
         }
       },
       "required": [
+        "matricule",
         "firstName",
         "lastName",
         "rank",

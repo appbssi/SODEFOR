@@ -23,7 +23,7 @@ interface PersonnelImportDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const expectedHeaders = ['firstName', 'lastName', 'rank', 'contact', 'address', 'email'];
+const expectedHeaders = ['matricule', 'firstName', 'lastName', 'rank', 'contact', 'address', 'email'];
 
 export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDialogProps) {
   const [file, setFile] = useState<File | null>(null);
@@ -69,6 +69,7 @@ export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDia
         }
 
         const personnelList: Omit<Personnel, 'id'>[] = json.map(row => ({
+          matricule: String(row.matricule || ''),
           firstName: String(row.firstName || ''),
           lastName: String(row.lastName || ''),
           rank: String(row.rank || ''),
@@ -100,11 +101,11 @@ export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[480px]">
+      <DialogContent className="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Importer le personnel depuis Excel</DialogTitle>
           <DialogDescription>
-            Sélectionnez un fichier .xlsx ou .csv à importer. Le fichier doit contenir les en-têtes : firstName, lastName, rank, contact, address, email.
+            Sélectionnez un fichier .xlsx ou .csv. Assurez-vous que le fichier contient les en-têtes: {expectedHeaders.join(', ')}.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
@@ -113,7 +114,7 @@ export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDia
             <AlertDescription>
                 <p className="font-semibold">Format attendu :</p>
                 <code className="block whitespace-pre-wrap text-xs rounded-sm bg-muted p-2 mt-2">
-                    {`firstName | lastName | rank       | contact    | address              | email\nJean      | Dupont   | Sergent    | 0123456789 | 1 Rue de la Paix...  | jean.dupont@...`}
+                    {`matricule | firstName | lastName | rank    | contact    | address      | email\nM123      | Jean      | Dupont   | Sergent | 0123456789 | 1 Rue de...  | jean@...`}
                 </code>
             </AlertDescription>
           </Alert>

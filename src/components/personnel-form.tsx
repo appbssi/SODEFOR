@@ -18,6 +18,7 @@ import { useApp } from '@/context/app-provider';
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
+  matricule: z.string().min(2, { message: 'Le matricule est requis.' }),
   lastName: z.string().min(2, { message: 'Le nom doit contenir au moins 2 caractères.' }),
   firstName: z.string().min(2, { message: 'Le prénom doit contenir au moins 2 caractères.' }),
   rank: z.string().min(2, { message: 'Le grade est requis.' }),
@@ -34,6 +35,7 @@ export function PersonnelForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      matricule: '',
       lastName: '',
       firstName: '',
       rank: '',
@@ -57,6 +59,32 @@ export function PersonnelForm() {
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <FormField
+            control={form.control}
+            name="matricule"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Matricule</FormLabel>
+                <FormControl>
+                  <Input placeholder="M12345" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="rank"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Grade</FormLabel>
+                <FormControl>
+                  <Input placeholder="Sergent" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="lastName"
@@ -83,19 +111,7 @@ export function PersonnelForm() {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="rank"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Grade</FormLabel>
-                <FormControl>
-                  <Input placeholder="Sergent" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+
           <FormField
             control={form.control}
             name="contact"
@@ -113,7 +129,7 @@ export function PersonnelForm() {
             control={form.control}
             name="address"
             render={({ field }) => (
-              <FormItem className="md:col-span-2">
+              <FormItem>
                 <FormLabel>Adresse</FormLabel>
                 <FormControl>
                   <Input placeholder="1 Rue de la Paix, Paris" {...field} />

@@ -61,12 +61,10 @@ export default function PersonnelPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="hidden w-[100px] sm:table-cell">
-                  <span className="sr-only">Avatar</span>
-                </TableHead>
+                <TableHead>Matricule</TableHead>
                 <TableHead>Nom Complet</TableHead>
                 <TableHead>Grade</TableHead>
-                <TableHead>Contact</TableHead>
+                <TableHead className="hidden md:table-cell">Contact</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
               </TableRow>
             </TableHeader>
@@ -74,9 +72,7 @@ export default function PersonnelPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell className="hidden sm:table-cell">
-                      <Skeleton className="h-10 w-10 rounded-full" />
-                    </TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
@@ -85,11 +81,7 @@ export default function PersonnelPage() {
                 ))
               ) : personnel.map((person: Personnel) => (
                 <TableRow key={person.id}>
-                  <TableCell className="hidden sm:table-cell">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-bold">
-                      {person.firstName.charAt(0)}{person.lastName.charAt(0)}
-                    </div>
-                  </TableCell>
+                  <TableCell className="font-medium">{person.matricule}</TableCell>
                   <TableCell>{person.firstName} {person.lastName}</TableCell>
                   <TableCell>{person.rank}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.contact}</TableCell>

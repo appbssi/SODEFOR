@@ -1,5 +1,6 @@
 export interface Personnel {
   id: string;
+  matricule: string;
   firstName: string;
   lastName: string;
   rank: string;
