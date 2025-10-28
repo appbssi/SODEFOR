@@ -1,49 +1,51 @@
 /**
  * @file Firestore Security Rules
- * @core-philosophy This ruleset enforces a public read-only model for personnel data,
- *  allowing anyone to read the list of personnel.
- *  Write operations are forbidden, as the application uses anonymous authentication.
- *  Attendance records are completely locked down for now, as the app uses anonymous authentication.
- * @data-structure
- *  - /personnel/{personnelId}: Stores information about each personnel member.
- *  - /attendance/{attendanceId}: Stores attendance records for each personnel member.
- * @key-security-decisions
- *  - Personnel data is publicly readable.
- *  - Write operations are disabled because anonymous authentication is being used.
- *  - Listing of personnel is public.
+ * @core_philosophy This ruleset enforces a basic security model where any authenticated user can read and write data.
+ * It assumes a prototyping phase where data validation is relaxed, and the focus is on quickly enabling app functionality.
+ * @data_structure The data is organized into two top-level collections: `personnel` and `attendance`.
+ * @key_security_decisions Public read access is granted for all collections to facilitate initial development.
+ * Write access is restricted to authenticated users but lacks fine-grained authorization (e.g., ownership checks).
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to personnel data.
+     * @description Allows any authenticated user to read and write personnel data.
      * @path /personnel/{personnelId}
-     * @allow (get, list): Any user can read personnel data.
-     * @deny (create, update, delete): No one can write personnel data.
-     * @principle Public read, no writes allowed.
+     * @allow (read) Any authenticated user can read personnel data.
+     * @deny (write) Unauthenticated users cannot write personnel data.
+     * @principle Authenticated users can create, update, and delete personnel data.
      */
     match /personnel/{personnelId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Attendance records are currently locked down.
+     * @description Allows any authenticated user to read and write attendance data.
      * @path /attendance/{attendanceId}
-     * @allow (get, list): No one can read attendance records.
-     * @deny (create, update, delete): No one can write attendance records.
-     * @principle No access to attendance records.
+     * @allow (read) Any authenticated user can read attendance data.
+     * @deny (write) Unauthenticated users cannot write attendance data.
+     * @principle Authenticated users can create, update, and delete attendance data.
      */
     match /attendance/{attendanceId} {
-      allow get: if false;
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    /**
+     * @description Defines a function to check if a user is signed in.
+     * @return True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }
