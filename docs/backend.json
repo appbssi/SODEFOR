@@ -1,0 +1,250 @@
+{
+  "entities": {
+    "Personnel": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Personnel",
+      "type": "object",
+      "description": "Represents a member of the personnel.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Personnel entity."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the personnel."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the personnel."
+        },
+        "idNumber": {
+          "type": "string",
+          "description": "ID number of the personnel."
+        },
+        "rank": {
+          "type": "string",
+          "description": "Rank of the personnel."
+        },
+        "contact": {
+          "type": "string",
+          "description": "Contact information of the personnel."
+        },
+        "address": {
+          "type": "string",
+          "description": "Address of the personnel."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the personnel.",
+          "format": "email"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "idNumber",
+        "rank",
+        "contact",
+        "address",
+        "email"
+      ]
+    },
+    "AttendanceRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceRecord",
+      "type": "object",
+      "description": "Represents a single attendance record for a personnel member.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceRecord entity."
+        },
+        "personnelId": {
+          "type": "string",
+          "description": "Reference to Personnel. (Relationship: Personnel 1:N AttendanceRecord)"
+        },
+        "date": {
+          "type": "string",
+          "description": "Date of the attendance record.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "Attendance status: present, absent, mission, permission."
+        },
+        "permissionDuration": {
+          "type": "string",
+          "description": "Duration of the permission, if applicable."
+        }
+      },
+      "required": [
+        "id",
+        "personnelId",
+        "date",
+        "status"
+      ]
+    },
+    "MonthlyReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MonthlyReport",
+      "type": "object",
+      "description": "Represents a monthly report of personnel attendance.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the MonthlyReport entity."
+        },
+        "month": {
+          "type": "number",
+          "description": "The month of the report (1-12)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year of the report."
+        },
+        "personnelId": {
+          "type": "string",
+          "description": "Reference to Personnel. (Relationship: Personnel 1:N MonthlyReport)"
+        },
+        "attendanceRecordIds": {
+          "type": "array",
+          "description": "References to AttendanceRecords. (Relationship: MonthlyReport 1:N AttendanceRecord)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "reportDetails": {
+          "type": "string",
+          "description": "Detailed information about the report (e.g., summary of attendance)."
+        }
+      },
+      "required": [
+        "id",
+        "month",
+        "year",
+        "personnelId",
+        "attendanceRecordIds"
+      ]
+    },
+    "Dashboard": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Dashboard",
+      "type": "object",
+      "description": "Represents the dashboard data.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Dashboard entity."
+        },
+        "totalPersonnel": {
+          "type": "number",
+          "description": "Total number of personnel."
+        },
+        "presentPersonnel": {
+          "type": "number",
+          "description": "Number of personnel present."
+        },
+        "absentPersonnel": {
+          "type": "number",
+          "description": "Number of personnel absent."
+        },
+        "personnelOnPermission": {
+          "type": "number",
+          "description": "Number of personnel on permission."
+        },
+        "personnelOnMission": {
+          "type": "number",
+          "description": "Number of personnel on mission."
+        }
+      },
+      "required": [
+        "id"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/personnel/{personnelId}",
+        "definition": {
+          "entityName": "Personnel",
+          "schema": {
+            "$ref": "#/backend/entities/Personnel"
+          },
+          "description": "Stores information about each personnel member.",
+          "params": [
+            {
+              "name": "personnelId",
+              "description": "Unique identifier for the Personnel entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/personnel/{personnelId}/attendance/{attendanceRecordId}",
+        "definition": {
+          "entityName": "AttendanceRecord",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceRecord"
+          },
+          "description": "Stores attendance records for each personnel member. The path ensures that AttendanceRecords are scoped to a specific personnel member.",
+          "params": [
+            {
+              "name": "personnelId",
+              "description": "The ID of the personnel member this attendance record belongs to."
+            },
+            {
+              "name": "attendanceRecordId",
+              "description": "Unique identifier for the AttendanceRecord entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/personnel/{personnelId}/monthlyReports/{monthlyReportId}",
+        "definition": {
+          "entityName": "MonthlyReport",
+          "schema": {
+            "$ref": "#/backend/entities/MonthlyReport"
+          },
+          "description": "Stores monthly reports for each personnel member. The path ensures that MonthlyReports are scoped to a specific personnel member.",
+          "params": [
+            {
+              "name": "personnelId",
+              "description": "The ID of the personnel member this monthly report belongs to."
+            },
+            {
+              "name": "monthlyReportId",
+              "description": "Unique identifier for the MonthlyReport entity."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/dashboard/{dashboardId}",
+        "definition": {
+          "entityName": "Dashboard",
+          "schema": {
+            "$ref": "#/backend/entities/Dashboard"
+          },
+          "description": "Stores overall dashboard data. There should be only one document in this collection.",
+          "params": [
+            {
+              "name": "dashboardId",
+              "description": "Unique identifier for the Dashboard entity."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to optimize for real-time updates and ensure data consistency across the dashboard and reports. It leverages path-based ownership for `Personnel`, `AttendanceRecord`, and `MonthlyReport` to simplify security rules. The `Dashboard` data is stored in a single document for quick access. To ensure authorization independence, access to `AttendanceRecord` and `MonthlyReport` is governed by the user's ownership derived from the path `/users/{userId}/*`. The structure supports required QAPs because list operations on Personnel, AttendanceRecords and MonthlyReports are restricted to user specific paths, preventing unauthorized access. The dashboard uses a single document; updates require write access, which can be limited to administrators using a DBAC approach."
+  }
+}

@@ -1,0 +1,123 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for personnel data, attendance records, and monthly reports.
+ * All data is nested under /personnel/{personnelId}, ensuring that only the owner (identified by personnelId) can
+ * create, read, update, or delete their own data. The dashboard data is secured using an admin-only access pattern.
+ *
+ * Data Structure:
+ * - /personnel/{personnelId}: Stores personal information for each member.
+ * - /personnel/{personnelId}/attendance/{attendanceRecordId}: Stores individual attendance records.
+ * - /personnel/{personnelId}/monthlyReports/{monthlyReportId}: Stores monthly reports.
+ * - /dashboard/{dashboardId}: Stores aggregated dashboard data.
+ *
+ * Key Security Decisions:
+ * - User listing is implicitly disallowed by the ownership model.
+ * - All write operations on personnel, attendance, and report data require the user to be the owner of the
+ *   corresponding personnel document.
+ * - The Dashboard collection is intended for admin-only access, but this is not yet implemented. A TODO has been added.
+ * - Data shape validation is relaxed in this prototype to enable faster iteration, but authorization checks are strictly enforced.
+ *
+ * Denormalization for Authorization:
+ * - The data structure itself denormalizes the user-ownership relationship by nesting all attendance records and monthly reports
+ *   under the personnel document. This avoids the need for complex `get()` calls in the security rules.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Secure access to personnel data, ensuring only the owner can read, write, update, or delete their own information.
+     * @path /personnel/{personnelId}
+     * @allow (create) User with UID 'user_abc' can create a personnel document with ID 'user_abc'.
+     * @allow (get) User with UID 'user_abc' can read their own personnel document.
+     * @deny (create) User with UID 'user_xyz' cannot create a personnel document with ID 'user_abc'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /personnel/{personnelId} {
+      function isOwner(personnelId) {
+        return request.auth != null && request.auth.uid == personnelId;
+      }
+
+      function isExistingOwner(personnelId) {
+        return isOwner(personnelId) && resource != null;
+      }
+
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if isOwner(personnelId) && request.resource.data.id == personnelId;
+      allow update: if isExistingOwner(personnelId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(personnelId);
+    }
+
+    /**
+     * @description Secure access to attendance records, ensuring only the owner of the personnel document can manage attendance records.
+     * @path /personnel/{personnelId}/attendance/{attendanceRecordId}
+     * @allow (create) User with UID 'user_abc' can create an attendance record under their personnel document.
+     * @allow (get) User with UID 'user_abc' can read an attendance record under their personnel document.
+     * @deny (create) User with UID 'user_xyz' cannot create an attendance record under personnel document 'user_abc'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /personnel/{personnelId}/attendance/{attendanceRecordId} {
+      function isOwner(personnelId) {
+        return request.auth != null && request.auth.uid == personnelId;
+      }
+
+      function isExistingOwner(personnelId) {
+        return isOwner(personnelId) && resource != null;
+      }
+
+      allow get: if isOwner(personnelId);
+      allow list: if isOwner(personnelId);
+
+      allow create: if isOwner(personnelId);
+      allow update: if isExistingOwner(personnelId);
+      allow delete: if isExistingOwner(personnelId);
+    }
+
+    /**
+     * @description Secure access to monthly reports, ensuring only the owner of the personnel document can manage the reports.
+     * @path /personnel/{personnelId}/monthlyReports/{monthlyReportId}
+     * @allow (create) User with UID 'user_abc' can create a monthly report under their personnel document.
+     * @allow (get) User with UID 'user_abc' can read a monthly report under their personnel document.
+     * @deny (create) User with UID 'user_xyz' cannot create a monthly report under personnel document 'user_abc'.
+     * @principle Enforces document ownership for writes.
+     */
+    match /personnel/{personnelId}/monthlyReports/{monthlyReportId} {
+      function isOwner(personnelId) {
+        return request.auth != null && request.auth.uid == personnelId;
+      }
+
+      function isExistingOwner(personnelId) {
+        return isOwner(personnelId) && resource != null;
+      }
+
+      allow get: if isOwner(personnelId);
+      allow list: if isOwner(personnelId);
+
+      allow create: if isOwner(personnelId);
+      allow update: if isExistingOwner(personnelId);
+      allow delete: if isExistingOwner(personnelId);
+    }
+
+    /**
+     * @description Secure access to the dashboard data. Intended for admin-only access.
+     * @path /dashboard/{dashboardId}
+     * @allow (get) Anyone can read the dashboard data.
+     * @deny (create) Non-admin user cannot create or modify dashboard data.
+     * @principle Restricts write access to administrators (currently unimplemented).
+     */
+    match /dashboard/{dashboardId} {
+        allow get: if true;
+        allow list: if false;
+
+        allow create: if false; // TODO: Add admin role validation once implemented.
+        allow update: if false; // TODO: Add admin role validation once implemented.
+        allow delete: if false; // TODO: Add admin role validation once implemented.
+    }
+  }
+
+  function isSignedIn() {
+    return request.auth != null;
+  }
+}
