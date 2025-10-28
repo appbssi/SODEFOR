@@ -1,53 +1,96 @@
 /**
  * @file Firestore Security Rules
- * @description This ruleset enforces a public read, owner-write model for personnel data and restricts attendance record creation.
+ * @description This ruleset enforces a strict user-ownership model for personnel data, while attendance data is publicly readable but only modifiable by the owner.
  *
  * Data Structure:
- * - /personnel/{personnelId}: Stores personnel information. Read access is public. Write access is restricted to authenticated users.
- * - /attendance/{attendanceId}: Stores attendance records. Write access is restricted to authenticated users.
+ * - /personnel/{personnelId}: Stores individual personnel profiles. Access is restricted to the personnel themselves.
+ * - /attendance/{attendanceId}: Stores attendance records. The intention is to make it publicly available.
  *
  * Key Security Decisions:
- * - Personnel data is publicly readable to support general access to directory information.
- * - Only authenticated users can create, update, or delete personnel records.
- * - Attendance records can only be created by authenticated users.
- *
- * Denormalization for Authorization:
- * - The 'Personnel' entity does not have an 'ownerId' or 'authorId' field.
+ * - Personnel records are private and accessible only to the authenticated user matching the `personnelId`.
+ * - Attendance records are publicly readable but only modifiable by the personnel themselves. The 'attendanceId' is composite and must match 'personnelId'.
+ * - No user listing is allowed to prevent information harvesting.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to personnel data, but restricts writes to authenticated users.
+     * @description Controls access to personnel documents.
      * @path /personnel/{personnelId}
-     * @allow (get, list): Any user can read personnel information.
-     * @allow (create, update, delete): Only authenticated users can create, update, or delete personnel records.
-     * @deny create, update, delete: if !isSignedIn();
-     * @principle Allows public read access but requires authentication for write operations.
+     * @allow (get) Authenticated user can retrieve their own personnel document.
+     *    - Request: auth.uid = "user123", path = "/personnel/user123"
+     * @deny (get) Authenticated user cannot retrieve another user's personnel document.
+     *    - Request: auth.uid = "user456", path = "/personnel/user123"
+     * @allow (create) Authenticated user can create their own personnel document.
+     *    - Request: auth.uid = "user123", path = "/personnel/user123"
+     * @deny (create) Authenticated user cannot create a personnel document with a mismatched ID.
+     *    - Request: auth.uid = "user123", path = "/personnel/user456"
+     * @allow (update) Authenticated user can update their own personnel document.
+     *    - Request: auth.uid = "user123", path = "/personnel/user123"
+     * @deny (update) Authenticated user cannot update another user's personnel document.
+     *    - Request: auth.uid = "user456", path = "/personnel/user123"
+     * @allow (delete) Authenticated user can delete their own personnel document.
+     *    - Request: auth.uid = "user123", path = "/personnel/user123"
+     * @deny (delete) Authenticated user cannot delete another user's personnel document.
+     *    - Request: auth.uid = "user456", path = "/personnel/user123"
+     * @principle Enforces document ownership for all operations.
      */
     match /personnel/{personnelId} {
-      allow get, list: if true;
-      allow create, update, delete: if isSignedIn();
+      allow get: if isSignedIn() && isOwner(personnelId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == personnelId;
+      allow update: if isSignedIn() && isOwner(personnelId);
+      allow delete: if isSignedIn() && isOwner(personnelId);
     }
 
     /**
-     * @description Allows authenticated users to create attendance records.
+     * @description Controls access to attendance documents.
      * @path /attendance/{attendanceId}
-     * @allow (create): Any authenticated user can create attendance records.
-     * @deny create: if !isSignedIn();
-     * @principle Restricts attendance record creation to authenticated users.
+     * @allow (get) Any user can retrieve any attendance document.
+     *    - Request: auth.uid = "anyUser", path = "/attendance/anyAttendanceId"
+     * @allow (list) Any user can list attendance documents.
+     *    - Request: auth.uid = "anyUser", path = "/attendance"
+     * @allow (create) Authenticated user can create an attendance document if personnelId matches their UID.
+     *    - Request: auth.uid = "user123", path = "/attendance/user123_2024-01-01", request.resource.data.personnelId = "user123"
+     * @deny (create) Authenticated user cannot create an attendance document if personnelId does not match their UID.
+     *    - Request: auth.uid = "user123", path = "/attendance/user456_2024-01-01", request.resource.data.personnelId = "user456"
+     * @allow (update) Authenticated user can update an attendance document if personnelId matches their UID and the document exists.
+     *    - Request: auth.uid = "user123", path = "/attendance/user123_2024-01-01", request.resource.data.personnelId = "user123"
+     * @deny (update) Authenticated user cannot update an attendance document if personnelId does not match their UID.
+     *    - Request: auth.uid = "user123", path = "/attendance/user456_2024-01-01", request.resource.data.personnelId = "user456"
+     * @allow (delete) Authenticated user can delete an attendance document if personnelId matches their UID and the document exists.
+     *    - Request: auth.uid = "user123", path = "/attendance/user123_2024-01-01", request.resource.data.personnelId = "user123"
+     * @deny (delete) Authenticated user cannot delete an attendance document if personnelId does not match their UID.
+     *    - Request: auth.uid = "user123", path = "/attendance/user456_2024-01-01", request.resource.data.personnelId = "user456"
+     * @principle Allows public read access but restricts write access to the document owner.
      */
     match /attendance/{attendanceId} {
-      allow get, list: if false;
-      allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.personnelId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.personnelId == request.auth.uid && getAfter().data.personnelId == request.auth.uid;
+      allow delete: if isSignedIn() && request.resource.data.personnelId == request.auth.uid && getAfter().data.personnelId == request.auth.uid;
     }
+  }
 
-    // Helper function to check if a user is signed in.
-    function isSignedIn() {
-      return request.auth != null;
-    }
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && exists(/databases/$(database)/documents/personnel/$(userId));
+  }
+
+  function isAttendanceOwner(attendanceId) {
+    return request.auth.uid == request.resource.data.personnelId;
+  }
+
+  function isExistingAttendanceOwner(attendanceId) {
+      return request.auth.uid == resource.data.personnelId && exists(/databases/$(database)/documents/attendance/$(attendanceId));
   }
 }
