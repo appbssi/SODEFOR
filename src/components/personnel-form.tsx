@@ -61,32 +61,6 @@ export function PersonnelForm() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <FormField
             control={form.control}
-            name="matricule"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Matricule</FormLabel>
-                <FormControl>
-                  <Input placeholder="M12345" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
-            name="rank"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Grade</FormLabel>
-                <FormControl>
-                  <Input placeholder="Sergent" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <FormField
-            control={form.control}
             name="lastName"
             render={({ field }) => (
               <FormItem>
@@ -111,7 +85,32 @@ export function PersonnelForm() {
               </FormItem>
             )}
           />
-
+          <FormField
+            control={form.control}
+            name="matricule"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Matricule</FormLabel>
+                <FormControl>
+                  <Input placeholder="M12345" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="rank"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Grade</FormLabel>
+                <FormControl>
+                  <Input placeholder="Sergent" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
           <FormField
             control={form.control}
             name="contact"
