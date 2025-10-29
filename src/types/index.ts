@@ -20,10 +20,20 @@ export interface AttendanceRecord {
     start: string;
     end: string;
   };
+  missionId?: string; // Reference to the mission
 }
 
 export interface DailyStatus {
   id: string; // YYYY-MM-DD
   validated: boolean;
   validatedAt: string; // ISO string date
+}
+
+export interface Mission {
+    id: string;
+    name: string;
+    description: string;
+    startDate: string; // YYYY-MM-DD
+    endDate: string; // YYYY-MM-DD
+    personnelIds: string[];
 }

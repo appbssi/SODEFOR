@@ -53,7 +53,7 @@ import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lock, LockOpen } from 'lucide-react';
+import { Lock, LockOpen, Rocket } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -76,7 +76,7 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
 };
 
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance, reactivateTodaysAttendance } = useApp();
+  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance, reactivateTodaysAttendance, missions } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
@@ -153,6 +153,14 @@ export default function AttendancePage() {
   const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
     return attendance.find(a => a.personnelId === personnelId && a.date === today);
   };
+  
+  const getMissionForPersonnel = (personnelId: string) => {
+      const attendanceRecord = getStatusForPersonnel(personnelId);
+      if(attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
+          return missions.find(m => m.id === attendanceRecord.missionId)
+      }
+      return null;
+  }
 
   return (
     <>
@@ -238,15 +246,32 @@ export default function AttendancePage() {
                 ))
               ) : personnel.map((person) => {
                 const currentStatusRecord = getStatusForPersonnel(person.id);
+                const mission = getMissionForPersonnel(person.id);
+
                 return (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
                     <TableCell>{person.rank}</TableCell>
                     <TableCell>
                       {currentStatusRecord ? (
-                        <Badge variant={statusVariant[currentStatusRecord.status]}>
-                          {statusOptions.find(s => s.value === currentStatusRecord.status)?.label}
-                        </Badge>
+                        <div className="flex items-center gap-2">
+                            <Badge variant={statusVariant[currentStatusRecord.status]}>
+                              {statusOptions.find(s => s.value === currentStatusRecord.status)?.label}
+                            </Badge>
+                            {mission && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Rocket className="h-4 w-4 text-muted-foreground" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="font-semibold">{mission.name}</p>
+                                            <p className="text-xs">{mission.description}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
                       ) : (
                         <Badge variant="outline">Non défini</Badge>
                       )}
@@ -255,14 +280,14 @@ export default function AttendancePage() {
                       <Select
                         value={currentStatusRecord?.status || ''}
                         onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
-                        disabled={isValidated}
+                        disabled={isValidated || mission !== null}
                       >
                         <SelectTrigger className="w-full md:w-[180px] float-right">
                           <SelectValue placeholder="Changer statut..." />
                         </SelectTrigger>
                         <SelectContent>
                           {statusOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
+                            <SelectItem key={option.value} value={option.value} disabled={option.value === 'mission'}>
                               {option.label}
                             </SelectItem>
                           ))}

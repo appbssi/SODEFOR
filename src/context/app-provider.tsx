@@ -2,20 +2,24 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext } from 'react';
-import type { Personnel, AttendanceRecord, DailyStatus } from '@/types';
+import type { Personnel, AttendanceRecord, DailyStatus, Mission } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
+  updateDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
+import { getDaysBetweenDates } from '@/lib/utils';
 
 interface AppContextType {
   personnel: Personnel[];
   attendance: AttendanceRecord[];
+  missions: Mission[];
   addPersonnel: (person: Omit<Personnel, 'id'>) => void;
   addMultiplePersonnel: (personnelList: Omit<Personnel, 'id'>[]) => Promise<void>;
   updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
+  addMission: (mission: Omit<Mission, 'id'>) => Promise<void>;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
   todaysStatus: DailyStatus | null;
@@ -45,6 +49,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const { data: attendanceData, isLoading: attendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
   const attendance = attendanceData || [];
+  
+  const missionsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'missions');
+  }, [firestore]);
+
+  const { data: missionsData, isLoading: missionsLoading } = useCollection<Mission>(missionsQuery);
+  const missions = (missionsData || []).sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   
   const todaysStatusRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -96,7 +108,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const attendanceId = `${record.personnelId}_${record.date}`;
     const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
 
-    const fullRecord: AttendanceRecord = {
+    const fullRecord: Partial<AttendanceRecord> = {
       personnelId: record.personnelId,
       date: record.date,
       status: record.status || 'present',
@@ -106,6 +118,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
   
+  const addMission = async (missionData: Omit<Mission, 'id'>) => {
+    if (!firestore) return;
+    
+    const batch = writeBatch(firestore);
+    
+    // 1. Add mission document
+    const missionCollection = collection(firestore, 'missions');
+    const newMissionRef = doc(missionCollection);
+    batch.set(newMissionRef, missionData);
+
+    // 2. Update attendance for each person for each day of the mission
+    const missionDays = getDaysBetweenDates(missionData.startDate, missionData.endDate);
+
+    missionData.personnelIds.forEach(personnelId => {
+      missionDays.forEach(day => {
+        const attendanceId = `${personnelId}_${day}`;
+        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+        const attendanceRecord = {
+          personnelId,
+          date: day,
+          status: 'mission' as const,
+          missionId: newMissionRef.id,
+        };
+        batch.set(attendanceDocRef, attendanceRecord, { merge: true });
+      });
+    });
+
+    await batch.commit();
+  };
+
   const validateTodaysAttendance = () => {
     if (!todaysStatusRef) return;
     const validationData = {
@@ -120,7 +162,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const reactivationData = {
       validated: false,
     };
-    setDocumentNonBlocking(todaysStatusRef, reactivationData, { merge: true });
+    updateDocumentNonBlocking(todaysStatusRef, reactivationData);
   };
 
   const getAttendanceForDate = (date: string) => {
@@ -131,14 +173,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return personnel.find(p => p.id === id);
   };
 
-  const loading = personnelLoading || attendanceLoading || statusLoading;
+  const loading = personnelLoading || attendanceLoading || statusLoading || missionsLoading;
 
   const value: AppContextType = {
     personnel,
     attendance,
+    missions,
     addPersonnel,
     addMultiplePersonnel,
     updateAttendance,
+    addMission,
     getAttendanceForDate,
     getPersonnelById,
     todaysStatus: todaysStatus || null,

@@ -77,6 +77,10 @@
               "format": "date"
             }
           }
+        },
+        "missionId": {
+          "type": "string",
+          "description": "Reference to Mission, if status is 'mission'."
         }
       },
       "required": [
@@ -101,6 +105,37 @@
         }
       },
       "required": ["validated", "validatedAt"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "type": "object",
+      "description": "Represents a mission with assigned personnel.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the mission."
+        },
+        "description": {
+          "type": "string",
+          "description": "Description of the mission."
+        },
+        "startDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "format": "date"
+        },
+        "personnelIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "List of personnel IDs assigned to the mission."
+        }
+      },
+      "required": ["name", "startDate", "endDate", "personnelIds"]
     }
   },
   "auth": {
@@ -126,6 +161,12 @@
         "$ref": "#/entities/DailyStatus"
       },
       "description": "Stores the validation status for a given day (YYYY-MM-DD)."
+    },
+    "/missions/{missionId}": {
+      "schema": {
+        "$ref": "#/entities/Mission"
+      },
+      "description": "Stores mission details and assigned personnel."
     }
   }
 }

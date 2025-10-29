@@ -8,6 +8,7 @@ import {
   Shield,
   Users,
   FileText,
+  Rocket,
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -22,6 +23,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Tableau de Bord', icon: BarChart3 },
   { href: '/personnel', label: 'Personnel', icon: Users },
   { href: '/attendance', label: 'Pointage', icon: CalendarCheck2 },
+  { href: '/missions', label: 'Missions', icon: Rocket },
   { href: '/reports', label: 'Rapports', icon: FileText },
 ];
 
