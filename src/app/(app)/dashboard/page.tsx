@@ -7,7 +7,8 @@ import {
   CardTitle,
   CardDescription
 } from '@/components/ui/card';
-import { useApp } from '@/context/app-provider';
+import { initialPersonnel, initialAttendance, initialMissions } from '@/lib/data';
+import type { Personnel } from '@/types';
 import { Users, UserCheck, UserX, Plane, Coffee } from 'lucide-react';
 import {
   ChartContainer,
@@ -42,7 +43,14 @@ const COLORS: { [key: string]: string } = {
 };
 
 export default function DashboardPage() {
-  const { personnel, attendance, getPersonnelById, missions } = useApp();
+  const personnel = initialPersonnel;
+  const attendance = initialAttendance;
+  const missions = initialMissions;
+
+  const getPersonnelById = (id: string): Personnel | undefined => {
+      return personnel.find(p => p.id === id);
+  }
+
   const today = new Date().toISOString().split('T')[0];
   const todaysAttendance = attendance.filter(a => a.date === today);
 
@@ -75,6 +83,7 @@ export default function DashboardPage() {
           console.error("Invalid permission date format:", record);
         }
       } else if (record.date === today) {
+        // This handles single-day permissions recorded today.
         personnelIds.add(record.personnelId);
       }
     });
@@ -189,7 +198,7 @@ export default function DashboardPage() {
                  const color = chartConfig[translatedStatus]?.color || '#ccc';
 
                  return (
-                   <div key={record.personnelId} className="flex items-center gap-4">
+                   <div key={record.personnelId + record.date} className="flex items-center gap-4">
                      <div className="p-2 rounded-full" style={{backgroundColor: `${color}20`}}>
                         <Icon className="h-5 w-5" style={{color: color}} />
                      </div>
