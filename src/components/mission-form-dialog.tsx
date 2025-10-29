@@ -141,7 +141,7 @@ const missionDetails: Record<string, string[]> = {
 };
 
 export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDialogProps) {
-  const { personnel, addMission } = useApp();
+  const { personnel, addMission, updateMission } = useApp();
   const { toast } = useToast();
   
   const [name, setName] = useState('');
@@ -187,7 +187,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       return;
     }
     
-    const missionData: Omit<Mission, 'id'> = {
+    const missionData = {
       name,
       description,
       date,
@@ -195,11 +195,20 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       totalHours,
     };
     
-    addMission(missionData);
-    toast({
-      title: 'Mission enregistrée !',
-      description: `La mission "${name}" a été créée avec succès.`,
-    });
+    if (mission) {
+      updateMission(mission.id, missionData);
+      toast({
+        title: 'Mission modifiée !',
+        description: `La mission "${name}" a été mise à jour.`,
+      });
+    } else {
+      addMission(missionData);
+      toast({
+        title: 'Mission enregistrée !',
+        description: `La mission "${name}" a été créée avec succès.`,
+      });
+    }
+
     onOpenChange(false);
   };
   
@@ -289,7 +298,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Annuler
           </Button>
-          <Button onClick={handleSubmit}>Enregistrer la mission</Button>
+          <Button onClick={handleSubmit}>Enregistrer</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

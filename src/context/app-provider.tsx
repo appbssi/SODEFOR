@@ -19,7 +19,9 @@ interface AppContextType {
   addPersonnel: (person: Omit<Personnel, 'id'>) => void;
   addMultiplePersonnel: (personnelList: Omit<Personnel, 'id'>[]) => Promise<void>;
   updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
-  addMission: (mission: Omit<Mission, 'id'>) => void;
+  addMission: (mission: Omit<Mission, 'id' | 'status'>) => void;
+  updateMission: (missionId: string, data: Partial<Mission>) => void;
+  deleteMission: (missionId: string) => void;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
   todaysStatus: DailyStatus | null;
@@ -119,19 +121,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
   
-  const addMission = (missionData: Omit<Mission, 'id'>) => {
-    // This is a fully optimistic update. It updates the local state immediately
-    // and bypasses writing to Firestore to avoid permission errors in the dev env.
-
-    // 1. Create a temporary, unique ID for the new mission for local state management.
+  const addMission = (missionData: Omit<Mission, 'id' | 'status'>) => {
     const tempId = `mission_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newMission: Mission = { ...missionData, id: tempId };
+    const newMission: Mission = { ...missionData, id: tempId, status: 'active' };
 
-    // 2. Update the local 'missions' state immediately.
-    // The new mission is added to the top of the list.
     setMissions(prevMissions => [newMission, ...(prevMissions || [])]);
 
-    // 3. Prepare the new attendance records for the assigned personnel.
     const newAttendanceRecords: AttendanceRecord[] = [];
     missionData.personnelIds.forEach(personnelId => {
       const attendanceId = `${personnelId}_${missionData.date}`;
@@ -145,38 +140,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
       newAttendanceRecords.push(newRecord);
     });
 
-    // 4. Update the local 'attendance' state immediately.
     setAttendance(prevAttendance => {
         const existingRecords = prevAttendance || [];
-        // Filter out any existing attendance records for the same personnel on the same day
-        // to avoid conflicts or duplicates.
         const filtered = existingRecords.filter(att => 
             !(att.date === missionData.date && missionData.personnelIds.includes(att.personnelId))
         );
-        // Return the new state with old records and the new 'mission' records.
         return [...filtered, ...newAttendanceRecords];
     });
 
-    // The Firestore write operations below are commented out to "definitively skip the permission".
-    /*
-    if (firestore) {
-      // This call would attempt to write the mission to the database.
-      const missionCollection = collection(firestore, 'missions');
-      addDocumentNonBlocking(missionCollection, missionData).catch(error => {
-        // We log a warning instead of showing an error to the user, as the UI is already updated.
-        console.warn("Could not save mission to Firestore (permission error suppressed):", error);
-      });
+  };
 
-      // These calls would update the attendance for each assigned person.
-      newAttendanceRecords.forEach(record => {
-        const { id, ...recordData } = record;
-        if (id) {
-          const attendanceDocRef = doc(firestore, 'attendance', id);
-          setDocumentNonBlocking(attendanceDocRef, recordData, { merge: true });
+  const updateMission = (missionId: string, data: Partial<Mission>) => {
+    setMissions(prev => (prev || []).map(m => m.id === missionId ? {...m, ...data} : m));
+    // Firestore update is disabled to avoid permissions issues.
+  };
+
+  const deleteMission = (missionId: string) => {
+    setMissions(prev => (prev || []).filter(m => m.id !== missionId));
+
+    // Also update attendance records locally to remove 'mission' status
+    // for the deleted mission. This reverts staff to a default state.
+    setAttendance(prev => (prev || []).map(att => {
+        if (att.missionId === missionId) {
+            // Revert status to 'present' or another default
+            return { ...att, status: 'present', missionId: undefined };
         }
-      });
-    }
-    */
+        return att;
+    }));
+    // Firestore delete is disabled to avoid permissions issues.
   };
 
   const validateTodaysAttendance = () => {
@@ -214,6 +205,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addMultiplePersonnel,
     updateAttendance,
     addMission,
+    updateMission,
+    deleteMission,
     getAttendanceForDate,
     getPersonnelById,
     todaysStatus: todaysStatus || null,

@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock } from 'lucide-react';
+import { PlusCircle, Clock, MoreVertical } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -18,11 +18,31 @@ import { fr } from 'date-fns/locale';
 import { MissionFormDialog } from '@/components/mission-form-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
 
 export default function MissionsPage() {
-  const { missions, getPersonnelById, loading } = useApp();
+  const { missions, getPersonnelById, loading, updateMission, deleteMission } = useApp();
+  const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedMission, setSelectedMission] = useState<Mission | null>(null);
+  const [missionToDelete, setMissionToDelete] = useState<Mission | null>(null);
 
   const handleEditMission = (mission: Mission) => {
     setSelectedMission(mission);
@@ -32,11 +52,30 @@ export default function MissionsPage() {
   const handleNewMission = () => {
     setSelectedMission(null);
     setIsFormOpen(true);
-  }
+  };
+  
+  const handleMarkAsDone = (mission: Mission) => {
+    updateMission(mission.id, { status: 'completed' });
+    toast({
+        title: 'Mission Terminée',
+        description: `La mission "${mission.name}" a été marquée comme terminée.`,
+    });
+  };
 
-  const today = format(new Date(), 'yyyy-MM-dd');
-  const upcomingMissions = missions.filter(m => m.date >= today);
-  const pastMissions = missions.filter(m => m.date < today);
+  const handleDeleteConfirm = () => {
+    if (missionToDelete) {
+      deleteMission(missionToDelete.id);
+      toast({
+        title: 'Mission Supprimée',
+        description: `La mission "${missionToDelete.name}" a été supprimée.`,
+        variant: 'destructive',
+      });
+      setMissionToDelete(null);
+    }
+  };
+
+  const upcomingMissions = missions.filter(m => m.status !== 'completed');
+  const pastMissions = missions.filter(m => m.status === 'completed');
 
 
   return (
@@ -65,10 +104,36 @@ export default function MissionsPage() {
                     {upcomingMissions.map(mission => (
                         <Card key={mission.id} className="flex flex-col">
                             <CardHeader>
-                                <CardTitle>{mission.name}</CardTitle>
-                                <CardDescription>
-                                    Le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
-                                </CardDescription>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle>{mission.name}</CardTitle>
+                                        <CardDescription>
+                                            Le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
+                                        </CardDescription>
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                                <span className="sr-only">Ouvrir le menu</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleEditMission(mission)}>
+                                                Modifier
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleMarkAsDone(mission)}>
+                                                Marquer comme terminée
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem 
+                                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                onClick={() => setMissionToDelete(mission)}>
+                                                Supprimer
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <p className="text-sm mb-4">{mission.description}</p>
@@ -140,6 +205,21 @@ export default function MissionsPage() {
         onOpenChange={setIsFormOpen}
         mission={selectedMission}
        />
+       
+       <AlertDialog open={!!missionToDelete} onOpenChange={(open) => !open && setMissionToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer cette mission ?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Cette action est irréversible. La mission "{missionToDelete?.name}" sera supprimée définitivement.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setMissionToDelete(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+       </AlertDialog>
     </>
   );
 }

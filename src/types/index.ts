@@ -36,4 +36,5 @@ export interface Mission {
     date: string; // YYYY-MM-DD
     personnelIds: string[];
     totalHours: number;
+    status?: 'active' | 'completed';
 }
