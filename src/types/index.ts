@@ -21,3 +21,9 @@ export interface AttendanceRecord {
     end: string;
   };
 }
+
+export interface DailyStatus {
+  id: string; // YYYY-MM-DD
+  validated: boolean;
+  validatedAt: string; // ISO string date
+}

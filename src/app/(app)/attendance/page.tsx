@@ -41,7 +41,19 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Lock } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
@@ -58,13 +70,15 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
 };
 
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById, loading } = useApp();
+  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [permissionStartDate, setPermissionStartDate] = useState('');
   const [permissionEndDate, setPermissionEndDate] = useState('');
+  
+  const isValidated = todaysStatus?.validated === true;
 
   const handleStatusChange = (personnelId: string, newStatus: AttendanceStatus) => {
     if (newStatus === 'permission') {
@@ -112,6 +126,14 @@ export default function AttendancePage() {
       });
     }
   };
+  
+  const handleValidation = () => {
+    validateTodaysAttendance();
+    toast({
+      title: 'Pointage Validé !',
+      description: 'Le pointage pour aujourd\'hui a été verrouillé.',
+    });
+  }
 
   const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
     return attendance.find(a => a.personnelId === personnelId && a.date === today);
@@ -121,13 +143,48 @@ export default function AttendancePage() {
     <>
       <Card>
         <CardHeader>
-          <CardTitle>Pointage du Jour</CardTitle>
-          <CardDescription>
-            Enregistrer la présence, l'absence, ou le statut pour chaque membre du personnel pour le{' '}
-            {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
-          </CardDescription>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                  <CardTitle>Pointage du Jour</CardTitle>
+                  <CardDescription>
+                      Enregistrer la présence, l'absence, ou le statut pour chaque membre du personnel pour le{' '}
+                      {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
+                  </CardDescription>
+              </div>
+              {!isValidated && !loading && (
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="gap-2 w-full sm:w-auto">
+                          <Lock className="h-4 w-4" />
+                          Valider le Pointage du Jour
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Êtes-vous absolument certain ?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette action verrouillera le pointage pour la journée. Aucune autre modification ne pourra être apportée.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+              )}
+          </div>
         </CardHeader>
         <CardContent>
+          {isValidated && (
+            <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
+                <Lock className="h-4 w-4 !text-yellow-800" />
+                <AlertTitle>Pointage Verrouillé</AlertTitle>
+                <AlertDescription>
+                    Le pointage pour aujourd'hui a été validé et ne peut plus être modifié.
+                </AlertDescription>
+            </Alert>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -166,6 +223,7 @@ export default function AttendancePage() {
                       <Select
                         value={currentStatusRecord?.status || ''}
                         onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
+                        disabled={isValidated}
                       >
                         <SelectTrigger className="w-full md:w-[180px] float-right">
                           <SelectValue placeholder="Changer statut..." />

@@ -84,6 +84,23 @@
         "date",
         "status"
       ]
+    },
+    "DailyStatus": {
+      "title": "DailyStatus",
+      "type": "object",
+      "description": "Represents the status of a specific day, for example, if attendance has been validated.",
+      "properties": {
+        "validated": {
+          "type": "boolean",
+          "description": "Whether the attendance for this day has been validated."
+        },
+        "validatedAt": {
+          "type": "string",
+          "description": "The timestamp when the validation occurred.",
+          "format": "date-time"
+        }
+      },
+      "required": ["validated", "validatedAt"]
     }
   },
   "auth": {
@@ -103,6 +120,12 @@
         "$ref": "#/entities/AttendanceRecord"
       },
       "description": "Stores attendance records for each personnel member. The ID is a composite of personnelId and date."
+    },
+    "/dailyStatus/{day}": {
+      "schema": {
+        "$ref": "#/entities/DailyStatus"
+      },
+      "description": "Stores the validation status for a given day (YYYY-MM-DD)."
     }
   }
 }

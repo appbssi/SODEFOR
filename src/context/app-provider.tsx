@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 import { createContext, useContext } from 'react';
-import type { Personnel, AttendanceRecord } from '@/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import type { Personnel, AttendanceRecord, DailyStatus } from '@/types';
+import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
@@ -18,6 +18,8 @@ interface AppContextType {
   updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
+  todaysStatus: DailyStatus | null;
+  validateTodaysAttendance: () => void;
   loading: boolean;
 }
 
@@ -37,13 +39,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const today = new Date().toISOString().split('T')[0];
   const attendanceQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // For simplicity and to avoid complex queries initially, we fetch all attendance.
-    // In a larger app, you might query by month or another range.
     return collection(firestore, 'attendance');
   }, [firestore]);
 
   const { data: attendanceData, isLoading: attendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
   const attendance = attendanceData || [];
+  
+  const todaysStatusRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'dailyStatus', today);
+  }, [firestore, today]);
+
+  const { data: todaysStatus, isLoading: statusLoading } = useDoc<DailyStatus>(todaysStatusRef);
 
   const addPersonnel = (person: Omit<Personnel, 'id'>) => {
     if (!firestore) return;
@@ -51,7 +58,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addDocumentNonBlocking(personnelCollection, person)
       .then((docRef) => {
         if(!docRef) return;
-        // After adding personnel, add a default attendance record for today.
         const newPersonnelId = docRef.id;
         const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelId}_${today}`);
         const newRecord = {
@@ -72,7 +78,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const newPersonnelRef = doc(personnelCollection);
         batch.set(newPersonnelRef, person);
         
-        // Also create a default 'present' attendance record for today
         const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelRef.id}_${today}`);
         const newRecord = {
           personnelId: newPersonnelRef.id,
@@ -93,11 +98,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const fullRecord: AttendanceRecord = {
       personnelId: record.personnelId,
       date: record.date,
-      status: record.status || 'present', // default to present if not provided
+      status: record.status || 'present',
       ...record,
     };
 
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
+  };
+  
+  const validateTodaysAttendance = () => {
+    if (!todaysStatusRef) return;
+    const validationData = {
+      validated: true,
+      validatedAt: new Date().toISOString(),
+    };
+    setDocumentNonBlocking(todaysStatusRef, validationData, { merge: true });
   };
 
   const getAttendanceForDate = (date: string) => {
@@ -108,7 +122,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return personnel.find(p => p.id === id);
   };
 
-  const loading = personnelLoading || attendanceLoading;
+  const loading = personnelLoading || attendanceLoading || statusLoading;
 
   const value: AppContextType = {
     personnel,
@@ -118,6 +132,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updateAttendance,
     getAttendanceForDate,
     getPersonnelById,
+    todaysStatus: todaysStatus || null,
+    validateTodaysAttendance,
     loading,
   };
 
