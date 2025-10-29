@@ -142,14 +142,18 @@ export default function ReportsPage() {
     }
   };
   
-  const monthOptions = useMemo(() => Array.from({ length: 12 }, (_, i) => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - i);
-    return {
-      value: format(d, 'yyyy-MM'),
-      label: format(d, 'MMMM yyyy', { locale: fr }),
-    };
-  }), []);
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 12; i++) {
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        options.push({
+            value: format(date, 'yyyy-MM'),
+            label: format(date, 'MMMM yyyy', { locale: fr }),
+        });
+    }
+    return options;
+  }, []);
 
   return (
     <Card>
