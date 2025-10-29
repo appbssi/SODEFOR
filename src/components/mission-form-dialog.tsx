@@ -219,7 +219,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{mission ? 'Modifier la mission' : 'Créer une nouvelle mission'}</DialogTitle>
+          <DialogTitle>{mission ? 'Modifier le Poste Analytique' : 'Poste Analytique'}</DialogTitle>
           <DialogDescription>
             Remplissez les détails ci-dessous et assignez le personnel.
           </DialogDescription>
