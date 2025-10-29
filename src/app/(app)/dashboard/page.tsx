@@ -7,7 +7,7 @@ import {
   CardTitle,
   CardDescription
 } from '@/components/ui/card';
-import { initialPersonnel, initialAttendance, initialMissions } from '@/lib/data';
+import { useApp } from '@/context/app-provider';
 import type { Personnel } from '@/types';
 import { Users, UserCheck, UserX, Plane, Coffee } from 'lucide-react';
 import {
@@ -43,13 +43,7 @@ const COLORS: { [key: string]: string } = {
 };
 
 export default function DashboardPage() {
-  const personnel = initialPersonnel;
-  const attendance = initialAttendance;
-  const missions = initialMissions;
-
-  const getPersonnelById = (id: string): Personnel | undefined => {
-      return personnel.find(p => p.id === id);
-  }
+  const { personnel, attendance, missions, getPersonnelById } = useApp();
 
   const today = new Date().toISOString().split('T')[0];
   const todaysAttendance = attendance.filter(a => a.date === today);
