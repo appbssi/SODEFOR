@@ -48,41 +48,59 @@ export default function DashboardPage() {
 
   const totalPersonnel = personnel.length;
 
-  const missionCount = useMemo(() => {
-    const personnelInActiveMissions = new Set<string>();
+  const personnelInActiveMissions = useMemo(() => {
+    const personnelIds = new Set<string>();
     missions
       .filter(m => m.status === 'active')
       .forEach(m => {
-        m.personnelIds.forEach(id => personnelInActiveMissions.add(id));
+        m.personnelIds.forEach(id => personnelIds.add(id));
       });
-    return personnelInActiveMissions.size;
+    return personnelIds;
   }, [missions]);
-  
-  const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
-  
-  const permissionCount = useMemo(() => {
+
+  const personnelOnPermission = useMemo(() => {
     const todayDate = startOfDay(new Date());
-    // Get all records with 'permission' status, regardless of the date, to check intervals.
+    const personnelIds = new Set<string>();
     const allPermissionRecords = attendance.filter(a => a.status === 'permission');
     
-    return allPermissionRecords.filter(record => {
+    allPermissionRecords.forEach(record => {
       if (record.permissionDuration && record.permissionDuration.start && record.permissionDuration.end) {
         try {
-          // Use startOfDay to compare dates without time component
           const start = startOfDay(parseISO(record.permissionDuration.start));
           const end = startOfDay(parseISO(record.permissionDuration.end));
-          return isWithinInterval(todayDate, { start, end });
+          if (isWithinInterval(todayDate, { start, end })) {
+            personnelIds.add(record.personnelId);
+          }
         } catch (e) {
           console.error("Invalid permission date format:", record);
-          return false; 
         }
+      } else if (record.date === today) {
+        personnelIds.add(record.personnelId);
       }
-      // Fallback for older records without duration
-      return record.date === today;
-    }).length;
+    });
+    return personnelIds;
   }, [attendance, today]);
 
-  const presentCount = Math.max(0, totalPersonnel - absentCount - permissionCount - missionCount);
+  const absentPersonnel = useMemo(() => {
+    const personnelIds = new Set<string>();
+    todaysAttendance
+        .filter(a => a.status === 'absent')
+        .forEach(a => personnelIds.add(a.personnelId));
+    return personnelIds;
+  }, [todaysAttendance]);
+  
+  const unavailablePersonnel = useMemo(() => {
+    const unavailable = new Set<string>();
+    personnelInActiveMissions.forEach(id => unavailable.add(id));
+    personnelOnPermission.forEach(id => unavailable.add(id));
+    absentPersonnel.forEach(id => unavailable.add(id));
+    return unavailable;
+  }, [personnelInActiveMissions, personnelOnPermission, absentPersonnel]);
+
+  const missionCount = personnelInActiveMissions.size;
+  const permissionCount = personnelOnPermission.size;
+  const absentCount = absentPersonnel.size;
+  const presentCount = totalPersonnel - unavailablePersonnel.size;
 
 
   const stats = [
