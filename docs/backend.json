@@ -123,6 +123,16 @@
           "type": "string",
           "format": "date"
         },
+        "startTime": {
+          "type": "string",
+          "format": "time",
+          "description": "Start time of the mission."
+        },
+        "endTime": {
+          "type": "string",
+          "format": "time",
+          "description": "End time of the mission."
+        },
         "personnelIds": {
           "type": "array",
           "items": {

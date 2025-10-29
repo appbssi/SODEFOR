@@ -20,6 +20,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Checkbox } from './ui/checkbox';
 import { Badge } from './ui/badge';
 import { Clock } from 'lucide-react';
+import { differenceInHours, parse } from 'date-fns';
 
 interface MissionFormDialogProps {
   open: boolean;
@@ -148,6 +149,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
+  const [startTime, setStartTime] = useState('');
+  const [endTime, setEndTime] = useState('');
   const [availableDescriptions, setAvailableDescriptions] = useState<string[]>([]);
   const [selectedPersonnelIds, setSelectedPersonnelIds] = useState<string[]>([]);
 
@@ -156,6 +159,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setName(mission.name);
       setDescription(mission.description);
       setDate(mission.date);
+      setStartTime(mission.startTime || '');
+      setEndTime(mission.endTime || '');
       setSelectedPersonnelIds(mission.personnelIds || []);
       if(mission.name && missionDetails[mission.name]) {
         setAvailableDescriptions(missionDetails[mission.name]);
@@ -165,12 +170,28 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setName('');
       setDescription('');
       setDate('');
+      setStartTime('');
+      setEndTime('');
       setSelectedPersonnelIds([]);
       setAvailableDescriptions([]);
     }
   }, [mission, open]);
   
-  const totalHours = useMemo(() => selectedPersonnelIds.length * 8, [selectedPersonnelIds]);
+  const totalHours = useMemo(() => {
+    if (startTime && endTime && selectedPersonnelIds.length > 0) {
+      try {
+        const startDate = parse(startTime, 'HH:mm', new Date());
+        const endDate = parse(endTime, 'HH:mm', new Date());
+        if (endDate > startDate) {
+          const duration = differenceInHours(endDate, startDate);
+          return duration * selectedPersonnelIds.length;
+        }
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
+  }, [startTime, endTime, selectedPersonnelIds]);
 
   const handleNameChange = (newName: string) => {
     setName(newName);
@@ -198,6 +219,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       name,
       description,
       date,
+      startTime,
+      endTime,
       personnelIds: selectedPersonnelIds,
       totalHours,
       vehicle: mission?.vehicle || '',
@@ -270,6 +293,17 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                         </ScrollArea>
                     </SelectContent>
                 </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="start-time">Heure de début</Label>
+                    <Input id="start-time" type="time" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="end-time">Heure de fin</Label>
+                    <Input id="end-time" type="time" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                </div>
             </div>
             
             <div className="grid gap-2">
