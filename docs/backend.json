@@ -119,11 +119,7 @@
           "type": "string",
           "description": "Description of the mission."
         },
-        "startDate": {
-          "type": "string",
-          "format": "date"
-        },
-        "endDate": {
+        "date": {
           "type": "string",
           "format": "date"
         },
@@ -135,7 +131,7 @@
           "description": "List of personnel IDs assigned to the mission."
         }
       },
-      "required": ["name", "startDate", "endDate", "personnelIds"]
+      "required": ["name", "date", "personnelIds"]
     }
   },
   "auth": {

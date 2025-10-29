@@ -31,32 +31,29 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [date, setDate] = useState('');
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
   
   useEffect(() => {
     if (mission) {
       setName(mission.name);
       setDescription(mission.description);
-      setStartDate(mission.startDate);
-      setEndDate(mission.endDate);
+      setDate(mission.date);
       setSelectedPersonnel(mission.personnelIds);
     } else {
       // Reset form for new mission
       setName('');
       setDescription('');
-      setStartDate('');
-      setEndDate('');
+      setDate('');
       setSelectedPersonnel([]);
     }
   }, [mission, open]);
 
   const handleSubmit = async () => {
-    if (!name || !startDate || !endDate || selectedPersonnel.length === 0) {
+    if (!name || !date || selectedPersonnel.length === 0) {
       toast({
         title: 'Champs requis manquants',
-        description: 'Veuillez remplir le nom, les dates et sélectionner au moins un agent.',
+        description: 'Veuillez remplir le nom, la date et sélectionner au moins un agent.',
         variant: 'destructive',
       });
       return;
@@ -65,8 +62,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     const missionData: Omit<Mission, 'id'> = {
       name,
       description,
-      startDate,
-      endDate,
+      date,
       personnelIds: selectedPersonnel,
     };
     
@@ -114,12 +110,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
-                    <Label htmlFor="start-date">Date de début</Label>
-                    <Input id="start-date" type="date" value={startDate} onChange={e => setStartDate(e.target.value)} />
-                </div>
-                <div className="grid gap-2">
-                    <Label htmlFor="end-date">Date de fin</Label>
-                    <Input id="end-date" type="date" value={endDate} onChange={e => setEndDate(e.target.value)} />
+                    <Label htmlFor="date">Date de la mission</Label>
+                    <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
                 </div>
             </div>
             <div className="grid gap-2">

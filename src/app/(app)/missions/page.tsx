@@ -34,8 +34,8 @@ export default function MissionsPage() {
   }
 
   const today = format(new Date(), 'yyyy-MM-dd');
-  const upcomingMissions = missions.filter(m => m.endDate >= today);
-  const pastMissions = missions.filter(m => m.endDate < today);
+  const upcomingMissions = missions.filter(m => m.date >= today);
+  const pastMissions = missions.filter(m => m.date < today);
 
 
   return (
@@ -66,7 +66,7 @@ export default function MissionsPage() {
                             <CardHeader>
                                 <CardTitle>{mission.name}</CardTitle>
                                 <CardDescription>
-                                    Du {format(new Date(mission.startDate), 'd MMMM yyyy', { locale: fr })} au {format(new Date(mission.endDate), 'd MMMM yyyy', { locale: fr })}
+                                    Le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
@@ -100,7 +100,7 @@ export default function MissionsPage() {
                             <CardHeader>
                                 <CardTitle>{mission.name}</CardTitle>
                                 <CardDescription>
-                                    Terminée le {format(new Date(mission.endDate), 'd MMMM yyyy', { locale: fr })}
+                                    Terminée le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
                                 </CardDescription>
                             </CardHeader>
                             <CardContent>

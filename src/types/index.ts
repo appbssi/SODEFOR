@@ -33,7 +33,6 @@ export interface Mission {
     id: string;
     name: string;
     description: string;
-    startDate: string; // YYYY-MM-DD
-    endDate: string; // YYYY-MM-DD
+    date: string; // YYYY-MM-DD
     personnelIds: string[];
 }

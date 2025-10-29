@@ -56,7 +56,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [firestore]);
 
   const { data: missionsData, isLoading: missionsLoading } = useCollection<Mission>(missionsQuery);
-  const missions = (missionsData || []).sort((a,b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
+  const missions = (missionsData || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   const todaysStatusRef = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -128,21 +128,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const newMissionRef = doc(missionCollection);
     batch.set(newMissionRef, missionData);
 
-    // 2. Update attendance for each person for each day of the mission
-    const missionDays = getDaysBetweenDates(missionData.startDate, missionData.endDate);
-
+    // 2. Update attendance for each person for the day of the mission
     missionData.personnelIds.forEach(personnelId => {
-      missionDays.forEach(day => {
-        const attendanceId = `${personnelId}_${day}`;
-        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
-        const attendanceRecord = {
-          personnelId,
-          date: day,
-          status: 'mission' as const,
-          missionId: newMissionRef.id,
-        };
-        batch.set(attendanceDocRef, attendanceRecord, { merge: true });
-      });
+      const attendanceId = `${personnelId}_${missionData.date}`;
+      const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+      const attendanceRecord = {
+        personnelId,
+        date: missionData.date,
+        status: 'mission' as const,
+        missionId: newMissionRef.id,
+      };
+      batch.set(attendanceDocRef, attendanceRecord, { merge: true });
     });
 
     await batch.commit();
