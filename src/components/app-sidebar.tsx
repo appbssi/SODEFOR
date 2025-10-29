@@ -9,6 +9,7 @@ import {
   Users,
   FileText,
   Rocket,
+  Car,
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -24,6 +25,7 @@ const menuItems = [
   { href: '/personnel', label: 'Personnel', icon: Users },
   { href: '/attendance', label: 'Pointage', icon: CalendarCheck2 },
   { href: '/missions', label: 'T.P.P.H.T', icon: Rocket, tooltip: 'Temps du Personnel Permanent en Heure de Travail' },
+  { href: '/vehicle-tracking', label: 'Suivi Véhicules', icon: Car },
   { href: '/reports', label: 'Rapports', icon: FileText },
 ];
 
