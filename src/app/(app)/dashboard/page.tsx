@@ -99,15 +99,13 @@ export default function DashboardPage() {
   }, [personnelInActiveMissions, personnelOnPermission, absentPersonnel]);
 
   const missionCount = personnelInActiveMissions.size;
-  const permissionCount = personnelOnPermission.size;
   const absentCount = absentPersonnel.size;
-  
-  // A person is present if they are not in the unavailable set.
   const presentCount = totalPersonnel - unavailablePersonnel.size;
 
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
+    { title: 'Présents au Service', value: presentCount, icon: UserCheck, color: 'text-green-600' },
     { title: 'Absents', value: absentCount, icon: UserX, color: 'text-red-600' },
     { title: 'En Mission', value: missionCount, icon: Plane, color: 'text-blue-600' },
   ];

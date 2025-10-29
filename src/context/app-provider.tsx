@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { Personnel, AttendanceRecord, DailyStatus, Mission } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
+import { collection, doc, writeBatch } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
@@ -12,6 +12,7 @@ import {
   deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { getDaysBetweenDates } from '@/lib/utils';
+import { isWithinInterval, parseISO, startOfDay } from 'date-fns';
 
 interface AppContextType {
   personnel: Personnel[];
@@ -210,13 +211,54 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteDocumentNonBlocking(missionRef);
   };
 
-  const validateTodaysAttendance = () => {
-    if (!todaysStatusRef) return;
+    const validateTodaysAttendance = () => {
+    if (!firestore || !todaysStatusRef) return;
+    
+    const batch = writeBatch(firestore);
+
+    const todayDate = startOfDay(new Date());
+
+    personnel.forEach(p => {
+      const attendanceId = `${p.id}_${today}`;
+      const attendanceRef = doc(firestore, 'attendance', attendanceId);
+      
+      const todaysAttendance = attendance.find(a => a.date === today && a.personnelId === p.id);
+      
+      const activeMission = missions.find(m => m.status === 'active' && m.personnelIds.includes(p.id));
+      
+      const onPermission = attendance.some(a => {
+        if (a.personnelId === p.id && a.permissionDuration?.start && a.permissionDuration?.end) {
+          const start = startOfDay(parseISO(a.permissionDuration.start));
+          const end = startOfDay(parseISO(a.permissionDuration.end));
+          return isWithinInterval(todayDate, { start, end });
+        }
+        return false;
+      });
+
+      let finalStatus: AttendanceStatus = 'present';
+      if (todaysAttendance) {
+        finalStatus = todaysAttendance.status;
+      } else if (activeMission) {
+        finalStatus = 'mission';
+      } else if (onPermission) {
+        finalStatus = 'permission';
+      }
+
+      batch.set(attendanceRef, {
+        personnelId: p.id,
+        date: today,
+        status: finalStatus,
+        ...todaysAttendance // Preserve permission duration etc. if it exists
+      }, { merge: true });
+    });
+
     const validationData = {
       validated: true,
       validatedAt: new Date().toISOString(),
     };
-    setDocumentNonBlocking(todaysStatusRef, validationData, { merge: true });
+    batch.set(todaysStatusRef, validationData, { merge: true });
+
+    batch.commit().catch(console.error);
   };
 
   const reactivateTodaysAttendance = () => {
