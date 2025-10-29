@@ -18,7 +18,7 @@ import type { Mission } from '@/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
-interface MissionFormDialogProps {
+interface VehicleMissionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mission: Mission | null;
@@ -138,7 +138,7 @@ const missionDetails: Record<string, string[]> = {
   ]
 };
 
-export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDialogProps) {
+export function VehicleMissionFormDialog({ open, onOpenChange, mission }: VehicleMissionFormDialogProps) {
   const { addMission, updateMission } = useApp();
   const { toast } = useToast();
   
@@ -177,10 +177,10 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   };
 
   const handleSubmit = async () => {
-    if (!name || !description || !date ) {
+    if (!name || !description || !date || !vehicle || !kilometers) {
       toast({
         title: 'Champs requis manquants',
-        description: 'Veuillez remplir le nom, la description et la date.',
+        description: 'Veuillez remplir tous les champs du formulaire.',
         variant: 'destructive',
       });
       return;
@@ -192,31 +192,18 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       date,
       personnelIds: [],
       totalHours: 0,
-      vehicle: mission?.vehicle || '',
-      kilometers: mission?.kilometers || 0,
+      vehicle,
+      kilometers: Number(kilometers) || 0,
     };
     
     if (mission) {
-      updateMission(mission.id, {
-        ...mission,
-        name,
-        description,
-        date,
-      });
+      updateMission(mission.id, missionData);
       toast({
         title: 'Mission modifiée !',
         description: `La mission "${name}" a été mise à jour.`,
       });
     } else {
-      addMission({
-        name,
-        description,
-        date,
-        personnelIds: [],
-        totalHours: 0,
-        vehicle: '',
-        kilometers: 0,
-      });
+      addMission(missionData);
       toast({
         title: 'Mission enregistrée !',
         description: `La mission "${name}" a été créée avec succès.`,
@@ -230,9 +217,9 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>{mission ? 'Modifier le Poste Analytique' : 'Poste Analytique'}</DialogTitle>
+          <DialogTitle>{mission ? 'Modifier la Mission Véhicule' : 'Nouvelle Mission Véhicule'}</DialogTitle>
           <DialogDescription>
-            Remplissez les détails ci-dessous.
+            Remplissez les détails ci-dessous pour une mission impliquant un véhicule.
           </DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
@@ -274,6 +261,16 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                 <div className="grid gap-2">
                     <Label htmlFor="date">Date de la mission</Label>
                     <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="vehicle">Véhicule</Label>
+                    <Input id="vehicle" placeholder="Ex: Toyota Hilux" value={vehicle} onChange={e => setVehicle(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="kilometers">Kilométrage</Label>
+                    <Input id="kilometers" type="number" placeholder="Ex: 120" value={kilometers} onChange={e => setKilometers(e.target.value === '' ? '' : Number(e.target.value))} />
                 </div>
             </div>
         </div>

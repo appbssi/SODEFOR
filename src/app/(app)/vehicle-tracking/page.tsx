@@ -22,7 +22,7 @@ import { fr } from 'date-fns/locale';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Car, PlusCircle } from 'lucide-react';
-import { MissionFormDialog } from '@/components/mission-form-dialog';
+import { VehicleMissionFormDialog } from '@/components/vehicle-mission-form-dialog';
 
 export default function VehicleTrackingPage() {
   const { missions, loading } = useApp();
@@ -99,7 +99,7 @@ export default function VehicleTrackingPage() {
           </Table>
         </CardContent>
       </Card>
-      <MissionFormDialog 
+      <VehicleMissionFormDialog 
         open={isFormOpen} 
         onOpenChange={setIsFormOpen}
         mission={null}
