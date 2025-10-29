@@ -112,7 +112,7 @@ export default function DashboardPage() {
   ];
 
   const chartData = useMemo(() => [
-    { name: 'Présents', value: presentCount, fill: COLORS.present },
+    { name: 'Présents', value: Math.max(0, presentCount), fill: COLORS.present },
     { name: 'Absents', value: absentCount, fill: COLORS.absent },
     { name: 'En Mission', value: missionCount, fill: COLORS.mission },
     { name: 'En Permission', value: permissionCount, fill: COLORS.permission },
@@ -135,7 +135,7 @@ export default function DashboardPage() {
               <stat.icon className={`h-4 w-4 text-muted-foreground ${stat.color}`} />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-2xl font-bold">{Math.max(0, stat.value)}</div>
             </CardContent>
           </Card>
         ))}
