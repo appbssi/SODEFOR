@@ -23,7 +23,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Tableau de Bord', icon: BarChart3 },
   { href: '/personnel', label: 'Personnel', icon: Users },
   { href: '/attendance', label: 'Pointage', icon: CalendarCheck2 },
-  { href: '/missions', label: 'Missions', icon: Rocket },
+  { href: '/missions', label: 'T.P.P.H.T', icon: Rocket },
   { href: '/reports', label: 'Rapports', icon: FileText },
 ];
 

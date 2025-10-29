@@ -28,7 +28,7 @@ const breadcrumbNameMap: { [key: string]: string } = {
   '/personnel': 'Personnel',
   '/personnel/new': 'Nouveau Personnel',
   '/attendance': 'Pointage',
-  '/missions': 'Missions',
+  '/missions': 'T.P.P.H.T',
   '/reports': 'Rapports',
 };
 
