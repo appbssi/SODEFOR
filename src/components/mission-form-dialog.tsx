@@ -149,6 +149,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   const [date, setDate] = useState('');
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
   const [availableDescriptions, setAvailableDescriptions] = useState<string[]>([]);
+  const [vehicle, setVehicle] = useState('');
+  const [kilometers, setKilometers] = useState<number | ''>('');
   
   const totalHours = useMemo(() => selectedPersonnel.length * 8, [selectedPersonnel]);
 
@@ -158,6 +160,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setDescription(mission.description);
       setDate(mission.date);
       setSelectedPersonnel(mission.personnelIds);
+      setVehicle(mission.vehicle || '');
+      setKilometers(mission.kilometers || '');
       if(mission.name && missionDetails[mission.name]) {
         setAvailableDescriptions(missionDetails[mission.name]);
       }
@@ -167,6 +171,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setDescription('');
       setDate('');
       setSelectedPersonnel([]);
+      setVehicle('');
+      setKilometers('');
       setAvailableDescriptions([]);
     }
   }, [mission, open]);
@@ -193,6 +199,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       date,
       personnelIds: selectedPersonnel,
       totalHours,
+      vehicle,
+      kilometers: Number(kilometers) || 0,
     };
     
     if (mission) {
@@ -268,6 +276,16 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                 <div className="grid gap-2">
                     <Label htmlFor="date">Date de la mission</Label>
                     <Input id="date" type="date" value={date} onChange={e => setDate(e.target.value)} />
+                </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="grid gap-2">
+                    <Label htmlFor="vehicle">Véhicule</Label>
+                    <Input id="vehicle" placeholder="Ex: Toyota Hilux" value={vehicle} onChange={e => setVehicle(e.target.value)} />
+                </div>
+                <div className="grid gap-2">
+                    <Label htmlFor="kilometers">Kilométrage</Label>
+                    <Input id="kilometers" type="number" placeholder="Ex: 120" value={kilometers} onChange={e => setKilometers(e.target.value === '' ? '' : Number(e.target.value))} />
                 </div>
             </div>
             <div className="grid gap-2">

@@ -37,4 +37,6 @@ export interface Mission {
     personnelIds: string[];
     totalHours: number;
     status?: 'active' | 'completed';
+    vehicle?: string;
+    kilometers?: number;
 }

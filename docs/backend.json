@@ -133,6 +133,14 @@
         "totalHours": {
           "type": "number",
           "description": "Total hours for the mission, calculated as 8 hours per assigned personnel."
+        },
+        "vehicle": {
+          "type": "string",
+          "description": "Vehicle used for the mission."
+        },
+        "kilometers": {
+          "type": "number",
+          "description": "Kilometers traveled during the mission."
         }
       },
       "required": ["name", "date", "personnelIds", "totalHours"]

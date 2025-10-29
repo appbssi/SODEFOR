@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MoreVertical } from 'lucide-react';
+import { PlusCircle, Clock, MoreVertical, Car } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -145,11 +145,17 @@ export default function MissionsPage() {
                                     })}
                                 </div>
                             </CardContent>
-                            <CardFooter className="pt-4">
+                            <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
                                 <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                                     <Clock className="h-4 w-4" />
                                     <span>{mission.totalHours || 0} Heures totales</span>
                                 </div>
+                                {mission.kilometers > 0 && (
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                        <Car className="h-4 w-4" />
+                                        <span>{mission.kilometers} km ({mission.vehicle})</span>
+                                    </div>
+                                )}
                             </CardFooter>
                         </Card>
                     ))}
@@ -184,11 +190,17 @@ export default function MissionsPage() {
                                     })}
                                 </div>
                             </CardContent>
-                            <CardFooter className="pt-4">
+                            <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
                                 <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                                     <Clock className="h-3 w-3" />
                                     <span>{mission.totalHours || 0} Heures totales</span>
                                 </div>
+                                {mission.kilometers > 0 && (
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                                        <Car className="h-3 w-3" />
+                                        <span>{mission.kilometers} km ({mission.vehicle})</span>
+                                    </div>
+                                )}
                             </CardFooter>
                         </Card>
                     ))}
