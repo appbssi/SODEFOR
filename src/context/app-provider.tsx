@@ -235,54 +235,74 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
     const validateTodaysAttendance = () => {
-    if (!firestore || !todaysStatusRef) return;
-    
-    const batch = writeBatch(firestore);
+        if (!firestore || !todaysStatusRef) return;
+        
+        const batch = writeBatch(firestore);
+        const todayDate = startOfDay(new Date());
 
-    const todayDate = startOfDay(new Date());
+        personnel.forEach(p => {
+            const attendanceId = `${p.id}_${today}`;
+            const attendanceRef = doc(firestore, 'attendance', attendanceId);
+            
+            // Get today's record for the person
+            const todaysRecord = attendance.find(a => a.date === today && a.personnelId === p.id);
+            
+            // Check for mission from attendance record
+            const missionRecord = attendance.find(a => 
+                a.personnelId === p.id && a.status === 'mission' && a.date === today && a.missionId
+            );
+            const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
 
-    personnel.forEach(p => {
-      const attendanceId = `${p.id}_${today}`;
-      const attendanceRef = doc(firestore, 'attendance', attendanceId);
-      
-      const todaysAttendance = attendance.find(a => a.date === today && a.personnelId === p.id);
-      
-      const activeMission = missions.find(m => m.status === 'active' && m.personnelIds.includes(p.id));
-      
-      const onPermission = attendance.some(a => {
-        if (a.personnelId === p.id && a.permissionDuration?.start && a.permissionDuration?.end) {
-          const start = startOfDay(parseISO(a.permissionDuration.start));
-          const end = startOfDay(parseISO(a.permissionDuration.end));
-          return isWithinInterval(todayDate, { start, end });
-        }
-        return false;
-      });
+            // Check for multi-day permission
+            const onPermission = attendance.some(a => {
+                if (a.personnelId === p.id && a.permissionDuration?.start && a.permissionDuration?.end) {
+                    try {
+                        const start = startOfDay(parseISO(a.permissionDuration.start));
+                        const end = startOfDay(parseISO(a.permissionDuration.end));
+                        return isWithinInterval(todayDate, { start, end });
+                    } catch { return false }
+                }
+                return false;
+            });
+            
+            let finalStatus: AttendanceStatus;
+            let recordToSave: Partial<AttendanceRecord> = {};
 
-      let finalStatus: AttendanceStatus = 'present';
-      if (todaysAttendance) {
-        finalStatus = todaysAttendance.status;
-      } else if (activeMission) {
-        finalStatus = 'mission';
-      } else if (onPermission) {
-        finalStatus = 'permission';
-      }
+            if (todaysRecord) {
+                // If a record exists for today, its status is the source of truth
+                finalStatus = todaysRecord.status;
+                recordToSave = { ...todaysRecord };
+            } else if (activeMission) {
+                finalStatus = 'mission';
+                recordToSave = { missionId: activeMission.id };
+            } else if (onPermission) {
+                finalStatus = 'permission';
+                // Find the specific permission record to preserve its duration
+                const permissionRecord = attendance.find(a => a.personnelId === p.id && onPermission);
+                if (permissionRecord) {
+                    recordToSave = { permissionDuration: permissionRecord.permissionDuration };
+                }
+            } else {
+                // Default to 'present' if no other status applies
+                finalStatus = 'present';
+            }
 
-      batch.set(attendanceRef, {
-        personnelId: p.id,
-        date: today,
-        status: finalStatus,
-        ...todaysAttendance // Preserve permission duration etc. if it exists
-      }, { merge: true });
-    });
+            batch.set(attendanceRef, {
+                personnelId: p.id,
+                date: today,
+                status: finalStatus,
+                ...recordToSave
+            }, { merge: true });
+        });
 
-    const validationData = {
-      validated: true,
-      validatedAt: new Date().toISOString(),
+        const validationData = {
+            validated: true,
+            validatedAt: new Date().toISOString(),
+        };
+        batch.set(todaysStatusRef, validationData, { merge: true });
+
+        batch.commit().catch(console.error);
     };
-    batch.set(todaysStatusRef, validationData, { merge: true });
-
-    batch.commit().catch(console.error);
-  };
 
   const reactivateTodaysAttendance = () => {
     if (!todaysStatusRef) return;
@@ -336,7 +356,3 @@ export function useApp() {
   }
   return context;
 }
-
-    
-
-    
