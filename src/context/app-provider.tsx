@@ -20,6 +20,7 @@ interface AppContextType {
   getPersonnelById: (id: string) => Personnel | undefined;
   todaysStatus: DailyStatus | null;
   validateTodaysAttendance: () => void;
+  reactivateTodaysAttendance: () => void;
   loading: boolean;
 }
 
@@ -114,6 +115,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(todaysStatusRef, validationData, { merge: true });
   };
 
+  const reactivateTodaysAttendance = () => {
+    if (!todaysStatusRef) return;
+    const reactivationData = {
+      validated: false,
+    };
+    setDocumentNonBlocking(todaysStatusRef, reactivationData, { merge: true });
+  };
+
   const getAttendanceForDate = (date: string) => {
     return attendance.filter(r => r.date === date);
   };
@@ -134,6 +143,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     getPersonnelById,
     todaysStatus: todaysStatus || null,
     validateTodaysAttendance,
+    reactivateTodaysAttendance,
     loading,
   };
 

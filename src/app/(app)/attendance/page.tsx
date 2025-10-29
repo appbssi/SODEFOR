@@ -53,7 +53,7 @@ import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lock } from 'lucide-react';
+import { Lock, LockOpen } from 'lucide-react';
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
@@ -70,7 +70,7 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
 };
 
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance } = useApp();
+  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance, reactivateTodaysAttendance } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
@@ -135,6 +135,15 @@ export default function AttendancePage() {
     });
   }
 
+  const handleReactivation = () => {
+    reactivateTodaysAttendance();
+    toast({
+      title: 'Modifications Réactivées!',
+      description: 'Le pointage pour aujourd\'hui peut de nouveau être modifié.',
+      variant: 'default',
+    });
+  }
+
   const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
     return attendance.find(a => a.personnelId === personnelId && a.date === today);
   };
@@ -151,28 +160,36 @@ export default function AttendancePage() {
                       {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
                   </CardDescription>
               </div>
-              {!isValidated && !loading && (
-                 <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" className="gap-2">
-                        <Lock className="h-4 w-4" />
-                        Valider le Pointage du Jour
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Cette action est irréversible. Une fois validé, le pointage de ce jour ne pourra plus être modifié.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Annuler</AlertDialogCancel>
-                        <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-              )}
+              <div className="flex items-center gap-2">
+                {!isValidated && !loading && (
+                  <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="gap-2">
+                          <Lock className="h-4 w-4" />
+                          Valider le Pointage
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Cette action est irréversible. Une fois validé, le pointage de ce jour ne pourra plus être modifié.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Annuler</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                )}
+                {isValidated && !loading && (
+                    <Button onClick={handleReactivation} variant="secondary" className="gap-2">
+                      <LockOpen className="h-4 w-4" />
+                      Réactiver les modifications
+                    </Button>
+                )}
+              </div>
           </div>
         </CardHeader>
         <CardContent>
