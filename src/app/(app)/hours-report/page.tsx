@@ -148,6 +148,10 @@ export default function HoursReportPage() {
     return options;
   }, []);
 
+  const totalMonthlyHours = useMemo(() => {
+    return reportData.reduce((acc, person) => acc + person.totalHours, 0);
+  }, [reportData]);
+
   return (
     <Card>
       <CardHeader>
@@ -205,6 +209,12 @@ export default function HoursReportPage() {
                   </TableRow>
                 ))}
               </TableBody>
+              <TableFooter>
+                <TableRow>
+                  <TableCell colSpan={daysOfMonth.length + 1} className="text-right font-bold text-lg sticky left-0 bg-card z-10">Total Général</TableCell>
+                  <TableCell className="text-right font-bold text-lg sticky right-0 bg-card z-10">{totalMonthlyHours}</TableCell>
+                </TableRow>
+              </TableFooter>
             </Table>
           </div>
         ) : (
