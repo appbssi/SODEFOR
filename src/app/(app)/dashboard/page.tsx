@@ -57,12 +57,12 @@ export default function DashboardPage() {
         return false;
     }).length;
   }, [personnel, todaysAttendance, missions]);
-
+  
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
   // A person is present if they are not absent, on mission, or on permission.
-  const presentCount = totalPersonnel - missionCount - absentCount - permissionCount;
+  const presentCount = totalPersonnel - absentCount - permissionCount - missionCount;
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
