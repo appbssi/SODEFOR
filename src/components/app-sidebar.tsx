@@ -23,7 +23,7 @@ const menuItems = [
   { href: '/dashboard', label: 'Tableau de Bord', icon: BarChart3 },
   { href: '/personnel', label: 'Personnel', icon: Users },
   { href: '/attendance', label: 'Pointage', icon: CalendarCheck2 },
-  { href: '/missions', label: 'T.P.P.H.T', icon: Rocket, fullLabel: 'Temps du Personnel Permanent en Heure de Travail' },
+  { href: '/missions', label: 'T.P.P.H.T', icon: Rocket, tooltip: 'Temps du Personnel Permanent en Heure de Travail' },
   { href: '/reports', label: 'Rapports', icon: FileText },
 ];
 
@@ -48,7 +48,7 @@ export function AppSidebar() {
                 asChild
                 isActive={pathname.startsWith(item.href)}
                 className={cn('justify-start')}
-                tooltip={{ children: item.fullLabel || item.label, className: 'bg-primary text-primary-foreground' }}
+                tooltip={{ children: item.tooltip || item.label, className: 'bg-primary text-primary-foreground' }}
               >
                 <Link href={item.href}>
                   <item.icon className="size-4" />
