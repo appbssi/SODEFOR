@@ -316,26 +316,6 @@ export default function AttendancePage() {
               </Alert>
             )}
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Présents au Service</CardTitle>
-                        <UserCheck className="h-4 w-4 text-muted-foreground text-green-600" />
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{Math.max(0, presentCount)}</div>}
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Absents</CardTitle>
-                        <UserX className="h-4 w-4 text-muted-foreground text-red-600" />
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{absentCount}</div>}
-                    </CardContent>
-                </Card>
-            </div>
             
             <Table>
               <TableHeader>
