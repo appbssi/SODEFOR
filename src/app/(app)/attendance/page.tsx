@@ -25,7 +25,7 @@ import {
 import { useApp } from '@/context/app-provider';
 import type { AttendanceStatus, Personnel, AttendanceRecord } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,12 +48,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { format } from 'date-fns';
+import { format, startOfDay, parseISO, isWithinInterval } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lock, LockOpen, Rocket } from 'lucide-react';
+import { Lock, LockOpen, Rocket, UserCheck, UserX } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -84,6 +84,64 @@ export default function AttendancePage() {
   const [permissionEndDate, setPermissionEndDate] = useState('');
   
   const isValidated = todaysStatus?.validated;
+
+  const todaysAttendance = attendance.filter(a => a.date === today);
+
+  const personnelInActiveMissions = useMemo(() => {
+    const personnelIds = new Set<string>();
+    missions
+      .filter(m => m.status === 'active')
+      .forEach(m => {
+        m.personnelIds.forEach(id => personnelIds.add(id));
+      });
+    return personnelIds;
+  }, [missions]);
+
+  const personnelOnPermission = useMemo(() => {
+    const todayDate = startOfDay(new Date());
+    const personnelIds = new Set<string>();
+    const allPermissionRecords = attendance.filter(a => 
+        (a.status === 'permission' && a.date === today) || 
+        (a.permissionDuration?.start && a.permissionDuration?.end)
+    );
+    
+    allPermissionRecords.forEach(record => {
+      if (record.permissionDuration && record.permissionDuration.start && record.permissionDuration.end) {
+        try {
+          const start = startOfDay(parseISO(record.permissionDuration.start));
+          const end = startOfDay(parseISO(record.permissionDuration.end));
+          if (isWithinInterval(todayDate, { start, end })) {
+            personnelIds.add(record.personnelId);
+          }
+        } catch (e) {
+          console.error("Invalid permission date format:", record);
+        }
+      } else if (record.status === 'permission' && record.date === today) {
+        personnelIds.add(record.personnelId);
+      }
+    });
+    return personnelIds;
+  }, [attendance, today]);
+
+  const absentPersonnel = useMemo(() => {
+    const personnelIds = new Set<string>();
+    todaysAttendance
+        .filter(a => a.status === 'absent')
+        .forEach(a => personnelIds.add(a.personnelId));
+    return personnelIds;
+  }, [todaysAttendance]);
+  
+  const unavailablePersonnel = useMemo(() => {
+    const unavailable = new Set<string>();
+    personnelInActiveMissions.forEach(id => unavailable.add(id));
+    personnelOnPermission.forEach(id => unavailable.add(id));
+    absentPersonnel.forEach(id => unavailable.add(id));
+    return unavailable;
+  }, [personnelInActiveMissions, personnelOnPermission, absentPersonnel]);
+
+  const presentCount = personnel.length - unavailablePersonnel.size;
+  const absentCount = absentPersonnel.size;
+
 
   const handleStatusChange = (personnelId: string, newStatus: AttendanceStatus) => {
     if (newStatus === 'permission') {
@@ -174,150 +232,174 @@ export default function AttendancePage() {
 
   return (
     <>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div>
-                  <CardTitle>Pointage du Jour</CardTitle>
-                  <CardDescription>
-                      Enregistrer la présence, l'absence, ou le statut pour chaque membre du personnel pour le{' '}
-                      {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
-                  </CardDescription>
-              </div>
-              <div className="flex items-center gap-2">
-                {!isValidated && !loading && (
-                  <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="gap-2">
-                          <Lock className="h-4 w-4" />
-                          Valider le Pointage
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            Cette action est irréversible. Une fois validé, le pointage de ce jour ne pourra plus être modifié.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Annuler</AlertDialogCancel>
-                          <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                )}
-                {isValidated && !loading && (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                           <Button onClick={handleReactivation} variant="secondary" size="icon">
-                              <LockOpen className="h-4 w-4" />
-                              <span className="sr-only">Réactiver les modifications</span>
-                            </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>Réactiver les modifications</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                )}
-              </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {isValidated && (
-            <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
-                <Lock className="h-4 w-4 !text-yellow-600" />
-                <AlertTitle className="font-bold">Pointage Verrouillé</AlertTitle>
-                <AlertDescription>
-                    Le pointage pour aujourd'hui a été validé et ne peut plus être modifié.
-                </AlertDescription>
-            </Alert>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Nom Complet</TableHead>
-                <TableHead>Grade</TableHead>
-                <TableHead>Statut Actuel</TableHead>
-                <TableHead className="w-[200px] text-right">Changer Statut</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({length: 5}).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
-                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
-                    <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
-                    <TableCell className="text-right"><Skeleton className="h-10 w-[180px] float-right" /></TableCell>
-                  </TableRow>
-                ))
-              ) : personnel.map((person) => {
-                const currentStatusRecord = getStatusForPersonnel(person.id);
-                const mission = getMissionForPersonnel(person.id);
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <CardTitle>Pointage du Jour</CardTitle>
+                    <CardDescription>
+                        Enregistrer la présence, l'absence, ou le statut pour chaque membre du personnel pour le{' '}
+                        {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
+                    </CardDescription>
+                </div>
+                <div className="flex items-center gap-2">
+                  {!isValidated && !loading && (
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button variant="destructive" className="gap-2">
+                            <Lock className="h-4 w-4" />
+                            Valider le Pointage
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              Cette action est irréversible. Une fois validé, le pointage de ce jour ne pourra plus être modifié.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter>
+                            <AlertDialogCancel>Annuler</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                  )}
+                  {isValidated && !loading && (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button onClick={handleReactivation} variant="secondary" size="icon">
+                                <LockOpen className="h-4 w-4" />
+                                <span className="sr-only">Réactiver les modifications</span>
+                              </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Réactiver les modifications</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                  )}
+                </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isValidated && (
+              <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
+                  <Lock className="h-4 w-4 !text-yellow-600" />
+                  <AlertTitle className="font-bold">Pointage Verrouillé</AlertTitle>
+                  <AlertDescription>
+                      Le pointage pour aujourd'hui a été validé et ne peut plus être modifié.
+                  </AlertDescription>
+              </Alert>
+            )}
 
-                // If the mission is completed, the status from the attendance record might still be 'mission'.
-                // We should treat it as 'present' for UI purposes if the mission is done.
-                let displayStatus: AttendanceStatus = currentStatusRecord?.status || 'present';
-                if (currentStatusRecord?.status === 'mission' && !mission) {
-                  displayStatus = 'present'; // Or another default status
-                }
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Présents au Service</CardTitle>
+                        <UserCheck className="h-4 w-4 text-muted-foreground text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{Math.max(0, presentCount)}</div>}
+                    </CardContent>
+                </Card>
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Absents</CardTitle>
+                        <UserX className="h-4 w-4 text-muted-foreground text-red-600" />
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? <Skeleton className="h-8 w-10" /> : <div className="text-2xl font-bold">{absentCount}</div>}
+                    </CardContent>
+                </Card>
+            </div>
+            
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nom Complet</TableHead>
+                  <TableHead>Grade</TableHead>
+                  <TableHead>Statut Actuel</TableHead>
+                  <TableHead className="w-[200px] text-right">Changer Statut</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {loading ? (
+                  Array.from({length: 5}).map((_, i) => (
+                    <TableRow key={i}>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                      <TableCell className="text-right"><Skeleton className="h-10 w-[180px] float-right" /></TableCell>
+                    </TableRow>
+                  ))
+                ) : personnel.map((person) => {
+                  const currentStatusRecord = getStatusForPersonnel(person.id);
+                  const mission = getMissionForPersonnel(person.id);
 
-                return (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
-                    <TableCell>{person.rank}</TableCell>
-                    <TableCell>
-                      {currentStatusRecord ? (
-                        <div className="flex items-center gap-2">
-                            <Badge variant={statusVariant[displayStatus]}>
-                              {allStatusOptions.find(s => s.value === displayStatus)?.label}
-                            </Badge>
-                            {mission && (
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger>
-                                            <Rocket className="h-4 w-4 text-muted-foreground" />
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p className="font-semibold">{mission.name}</p>
-                                            <p className="text-xs">{mission.description}</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                            )}
-                        </div>
-                      ) : (
-                        <Badge variant="outline">Non défini</Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Select
-                        value={displayStatus}
-                        onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
-                        disabled={isValidated || mission !== null}
-                      >
-                        <SelectTrigger className="w-full md:w-[180px] float-right">
-                          <SelectValue placeholder="Changer statut..." />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {statusOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                  // If the mission is completed, the status from the attendance record might still be 'mission'.
+                  // We should treat it as 'present' for UI purposes if the mission is done.
+                  let displayStatus: AttendanceStatus = currentStatusRecord?.status || 'present';
+                  if (currentStatusRecord?.status === 'mission' && !mission) {
+                    displayStatus = 'present'; // Or another default status
+                  }
+
+                  return (
+                    <TableRow key={person.id}>
+                      <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
+                      <TableCell>{person.rank}</TableCell>
+                      <TableCell>
+                        {currentStatusRecord ? (
+                          <div className="flex items-center gap-2">
+                              <Badge variant={statusVariant[displayStatus]}>
+                                {allStatusOptions.find(s => s.value === displayStatus)?.label}
+                              </Badge>
+                              {mission && (
+                                  <TooltipProvider>
+                                      <Tooltip>
+                                          <TooltipTrigger>
+                                              <Rocket className="h-4 w-4 text-muted-foreground" />
+                                          </TooltipTrigger>
+                                          <TooltipContent>
+                                              <p className="font-semibold">{mission.name}</p>
+                                              <p className="text-xs">{mission.description}</p>
+                                          </TooltipContent>
+                                      </Tooltip>
+                                  </TooltipProvider>
+                              )}
+                          </div>
+                        ) : (
+                          <Badge variant="outline">Non défini</Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Select
+                          value={displayStatus}
+                          onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
+                          disabled={isValidated || mission !== null}
+                        >
+                          <SelectTrigger className="w-full md:w-[180px] float-right">
+                            <SelectValue placeholder="Changer statut..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {statusOptions.map(option => (
+                              <SelectItem key={option.value} value={option.value}>
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
 
       <Dialog open={permissionModalOpen} onOpenChange={setPermissionModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -362,3 +444,5 @@ export default function AttendancePage() {
     </>
   );
 }
+
+    
