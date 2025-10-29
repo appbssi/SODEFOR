@@ -105,7 +105,6 @@ export default function DashboardPage() {
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
-    { title: 'Présents au Service', value: presentCount, icon: UserCheck, color: 'text-green-600' },
     { title: 'Absents', value: absentCount, icon: UserX, color: 'text-red-600' },
     { title: 'En Mission', value: missionCount, icon: Plane, color: 'text-blue-600' },
   ];
