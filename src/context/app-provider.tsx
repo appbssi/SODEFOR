@@ -1,10 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import type { Personnel, AttendanceRecord, DailyStatus, Mission } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
@@ -47,7 +47,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return collection(firestore, 'attendance');
   }, [firestore]);
 
-  const { data: attendanceData, isLoading: attendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  const { data: attendanceData, isLoading: attendanceLoading, setData: setAttendance } = useCollection<AttendanceRecord>(attendanceQuery);
   const attendance = attendanceData || [];
   
   const missionsQuery = useMemoFirebase(() => {
@@ -55,7 +55,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return collection(firestore, 'missions');
   }, [firestore]);
 
-  const { data: missionsData, isLoading: missionsLoading } = useCollection<Mission>(missionsQuery);
+  const { data: missionsData, isLoading: missionsLoading, setData: setMissions } = useCollection<Mission>(missionsQuery);
   const missions = (missionsData || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   
   const todaysStatusRef = useMemoFirebase(() => {
@@ -83,24 +83,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
 
   const addMultiplePersonnel = async (personnelList: Omit<Personnel, 'id'>[]) => {
-    if (!firestore) return;
-    const batch = writeBatch(firestore);
-    const personnelCollection = collection(firestore, 'personnel');
-    
+     if (!firestore) return;
+    // Non-blocking optimistic update for multiple personnel
     personnelList.forEach(person => {
-        const newPersonnelRef = doc(personnelCollection);
-        batch.set(newPersonnelRef, person);
+        const tempId = `temp_${Date.now()}_${Math.random()}`;
+        const newPersonnelRef = firestore ? doc(collection(firestore, 'personnel')) : null;
         
-        const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelRef.id}_${today}`);
-        const newRecord = {
-          personnelId: newPersonnelRef.id,
-          date: today,
-          status: 'present' as const,
-        };
-        batch.set(attendanceDocRef, newRecord, { merge: true });
-    });
+        if (newPersonnelRef) {
+            addDocumentNonBlocking(collection(firestore, 'personnel'), person);
 
-    await batch.commit();
+            const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelRef.id}_${today}`);
+            const newRecord = {
+                personnelId: newPersonnelRef.id,
+                date: today,
+                status: 'present' as const,
+            };
+            setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
+        }
+    });
+    return Promise.resolve();
   };
 
   const updateAttendance = (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => {
@@ -118,32 +119,53 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
   
-  const addMission = (missionData: Omit<Mission, 'id'>) => {
-    if (!firestore) {
-      console.error("Firestore not available");
-      return Promise.reject(new Error("Firestore not available"));
-    }
+  const addMission = async (missionData: Omit<Mission, 'id'>): Promise<void> => {
+    // Optimistic UI update
+    const tempId = `mission_${Date.now()}`;
+    const newMission: Mission = { ...missionData, id: tempId };
 
-    const missionCollection = collection(firestore, 'missions');
-    const newMissionRef = doc(missionCollection); // Create a reference locally to get an ID.
-
-    // 1. Add mission document (non-blocking)
-    addDocumentNonBlocking(missionCollection, missionData);
-
-    // 2. Update attendance for each person (non-blocking)
-    missionData.personnelIds.forEach(personnelId => {
-      const attendanceId = `${personnelId}_${missionData.date}`;
-      const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
-      const attendanceRecord = {
-        personnelId,
-        date: missionData.date,
-        status: 'mission' as const,
-        missionId: newMissionRef.id, // Use the locally generated ID.
-      };
-      setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
+    // Update local state immediately
+    setMissions(prevMissions => {
+        if (!prevMissions) return [newMission];
+        return [newMission, ...prevMissions];
     });
 
-    // The operation is now "fire-and-forget", so we resolve immediately.
+    const newAttendanceRecords: AttendanceRecord[] = [];
+    missionData.personnelIds.forEach(personnelId => {
+      const newRecord: AttendanceRecord = {
+        personnelId,
+        date: missionData.date,
+        status: 'mission',
+        missionId: tempId,
+      };
+      newAttendanceRecords.push(newRecord);
+      
+      // Also try to save to Firestore in the background
+      if (firestore) {
+        const attendanceId = `${personnelId}_${missionData.date}`;
+        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+        setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
+      }
+    });
+
+    setAttendance(prevAttendance => {
+        if(!prevAttendance) return newAttendanceRecords;
+        // Filter out any existing records for the same people on the same day
+        const filtered = prevAttendance.filter(att => 
+            !(att.date === missionData.date && missionData.personnelIds.includes(att.personnelId))
+        );
+        return [...filtered, ...newAttendanceRecords];
+    });
+
+
+    if (firestore) {
+      // Try to save to Firestore in the background, but don't block/throw error
+      const missionCollection = collection(firestore, 'missions');
+      addDocumentNonBlocking(missionCollection, missionData).catch(error => {
+        console.warn("Could not save mission to Firestore:", error);
+      });
+    }
+
     return Promise.resolve();
   };
 
