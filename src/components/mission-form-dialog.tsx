@@ -123,11 +123,13 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                     <SelectValue placeholder="Sélectionnez un nom de mission..." />
                   </SelectTrigger>
                   <SelectContent>
-                    {missionNames.map(missionName => (
-                      <SelectItem key={missionName} value={missionName}>
-                        {missionName}
-                      </SelectItem>
-                    ))}
+                    <ScrollArea className="h-72">
+                      {missionNames.map(missionName => (
+                        <SelectItem key={missionName} value={missionName}>
+                          {missionName}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
                   </SelectContent>
                 </Select>
             </div>
