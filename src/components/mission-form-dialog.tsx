@@ -18,12 +18,28 @@ import { useToast } from '@/hooks/use-toast';
 import type { Mission } from '@/types';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface MissionFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   mission: Mission | null;
 }
+
+const missionNames = [
+  'CARTOGRAPHIE',
+  'DELIMITATION',
+  'INFRASTRUCTURES LIEES AUX REBOISE',
+  'AMENAGEMENTS FORÊT NATURELLES',
+  'REBOISEMENT',
+  "TRAVAUX D'ENTRETIEN ET DE SYLVICULTURE",
+  'ACTIVITES SOCIO-ECONOMIQUES',
+  "PLANS D'AMENAGEMENT",
+  'PRODUCTION/COMMERCIALISATION',
+  'SURVEILLANCES',
+  'DISPOSITIFS EXPERIMENTAUX',
+  'ADMINISTRATION',
+];
 
 export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDialogProps) {
   const { personnel, addMission } = useApp();
@@ -102,7 +118,18 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
         <div className="grid gap-6 py-4">
             <div className="grid gap-2">
                 <Label htmlFor="name">Nom de la mission</Label>
-                <Input id="name" value={name} onChange={e => setName(e.target.value)} placeholder="Ex: Opération Sentinelle" />
+                <Select value={name} onValueChange={setName}>
+                  <SelectTrigger id="name">
+                    <SelectValue placeholder="Sélectionnez un nom de mission..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {missionNames.map(missionName => (
+                      <SelectItem key={missionName} value={missionName}>
+                        {missionName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
