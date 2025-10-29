@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/chart';
 import { PieChart, Pie, Cell } from 'recharts';
 import { useMemo } from 'react';
+import { isWithinInterval, parseISO } from 'date-fns';
 
 const ICONS: { [key: string]: React.ElementType } = {
   present: UserCheck,
@@ -51,7 +52,7 @@ export default function DashboardPage() {
     // Count unique personnel across all active missions
     const personnelInActiveMissions = new Set<string>();
     missions
-      .filter(m => m.status !== 'completed')
+      .filter(m => m.status === 'active')
       .forEach(m => {
         m.personnelIds.forEach(id => personnelInActiveMissions.add(id));
       });
@@ -59,8 +60,28 @@ export default function DashboardPage() {
   }, [missions]);
   
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
-  const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
+  const permissionCount = useMemo(() => {
+    const todayDate = new Date();
+    // We only need to check records with status 'permission' that might be relevant.
+    // This is an approximation; a more robust solution would query all permission records.
+    // For now, we assume getAttendanceForDate gives us enough context.
+    const allPermissionRecords = getAttendanceForDate(today).filter(a => a.status === 'permission');
+    
+    return allPermissionRecords.filter(record => {
+      if (record.permissionDuration) {
+        try {
+          const start = parseISO(record.permissionDuration.start);
+          const end = parseISO(record.permissionDuration.end);
+          return isWithinInterval(todayDate, { start, end });
+        } catch (e) {
+          return false; // Invalid date format
+        }
+      }
+      return record.date === today;
+    }).length;
+  }, [getAttendanceForDate, today]);
+
   const presentCount = Math.max(0, totalPersonnel - absentCount - permissionCount - missionCount);
 
 
