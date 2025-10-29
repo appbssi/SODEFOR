@@ -9,6 +9,7 @@ import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
   updateDocumentNonBlocking,
+  deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { getDaysBetweenDates } from '@/lib/utils';
 
@@ -122,52 +123,83 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const addMission = (missionData: Omit<Mission, 'id' | 'status'>) => {
+    if (!firestore) return;
+    const missionsCollection = collection(firestore, 'missions');
+    
+    // Optimistically update UI
     const tempId = `mission_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const newMission: Mission = { ...missionData, id: tempId, status: 'active' };
-
     setMissions(prevMissions => [newMission, ...(prevMissions || [])]);
 
-    const newAttendanceRecords: AttendanceRecord[] = [];
-    missionData.personnelIds.forEach(personnelId => {
-      const attendanceId = `${personnelId}_${missionData.date}`;
-      const newRecord: AttendanceRecord = {
-        id: attendanceId,
-        personnelId,
-        date: missionData.date,
-        status: 'mission',
-        missionId: tempId,
-      };
-      newAttendanceRecords.push(newRecord);
-    });
-
-    setAttendance(prevAttendance => {
+    if (missionData.personnelIds && missionData.personnelIds.length > 0) {
+      const newAttendanceRecords: AttendanceRecord[] = [];
+      missionData.personnelIds.forEach(personnelId => {
+        const attendanceId = `${personnelId}_${missionData.date}`;
+        const newRecord: AttendanceRecord = {
+          id: attendanceId,
+          personnelId,
+          date: missionData.date,
+          status: 'mission',
+          missionId: tempId, // Use temp ID for local consistency
+        };
+        newAttendanceRecords.push(newRecord);
+      });
+      setAttendance(prevAttendance => {
         const existingRecords = prevAttendance || [];
         const filtered = existingRecords.filter(att => 
             !(att.date === missionData.date && missionData.personnelIds.includes(att.personnelId))
         );
         return [...filtered, ...newAttendanceRecords];
-    });
+      });
+    }
 
+    addDocumentNonBlocking(missionsCollection, { ...missionData, status: 'active' })
+      .then(docRef => {
+        if (!docRef) return;
+        const newMissionId = docRef.id;
+
+        // Update local state with real ID
+        setMissions(prevMissions => prevMissions?.map(m => m.id === tempId ? { ...m, id: newMissionId } : m) || []);
+        
+        if (missionData.personnelIds && missionData.personnelIds.length > 0) {
+          missionData.personnelIds.forEach(personnelId => {
+            const attendanceId = `${personnelId}_${missionData.date}`;
+            const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+            const attendanceRecord: Omit<AttendanceRecord, 'id'> = {
+              personnelId,
+              date: missionData.date,
+              status: 'mission',
+              missionId: newMissionId, // Use real mission ID
+            };
+            setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
+          });
+        }
+      });
   };
 
   const updateMission = (missionId: string, data: Partial<Mission>) => {
-    setMissions(prev => (prev || []).map(m => m.id === missionId ? {...m, ...data} : m));
-    // Firestore update is disabled to avoid permissions issues.
+    if (!firestore) return;
+    const missionRef = doc(firestore, 'missions', missionId);
+    updateDocumentNonBlocking(missionRef, data);
   };
 
   const deleteMission = (missionId: string) => {
-    setMissions(prev => (prev || []).filter(m => m.id !== missionId));
+    if (!firestore) return;
+    const missionRef = doc(firestore, 'missions', missionId);
+    
+    const missionToDelete = missions.find(m => m.id === missionId);
+    
+    // Reset attendance for associated personnel
+    if (missionToDelete && missionToDelete.personnelIds) {
+      missionToDelete.personnelIds.forEach(personnelId => {
+        const attendanceId = `${personnelId}_${missionToDelete.date}`;
+        const attendanceRef = doc(firestore, 'attendance', attendanceId);
+        // This assumes reverting to 'present'. You might want a more complex logic.
+        updateDocumentNonBlocking(attendanceRef, { status: 'present', missionId: '' });
+      });
+    }
 
-    // Also update attendance records locally to remove 'mission' status
-    // for the deleted mission. This reverts staff to a default state.
-    setAttendance(prev => (prev || []).map(att => {
-        if (att.missionId === missionId) {
-            // Revert status to 'present' or another default
-            return { ...att, status: 'present', missionId: undefined };
-        }
-        return att;
-    }));
-    // Firestore delete is disabled to avoid permissions issues.
+    deleteDocumentNonBlocking(missionRef);
   };
 
   const validateTodaysAttendance = () => {
@@ -185,7 +217,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       validated: false,
     };
     updateDocumentNonBlocking(todaysStatusRef, reactivationData);
-  };
+};
 
   const getAttendanceForDate = (date: string) => {
     return attendance.filter(r => r.date === date);

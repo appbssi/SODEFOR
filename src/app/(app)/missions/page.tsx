@@ -137,20 +137,26 @@ export default function MissionsPage() {
                             </CardHeader>
                             <CardContent className="flex-grow">
                                 <p className="text-sm mb-4">{mission.description}</p>
-                                <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {mission.personnelIds.map(id => {
-                                        const p = getPersonnelById(id);
-                                        return p ? <Badge key={id} variant="secondary">{p.lastName} {p.firstName}</Badge> : null;
-                                    })}
-                                </div>
+                                {mission.personnelIds && mission.personnelIds.length > 0 && (
+                                    <>
+                                        <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {mission.personnelIds.map(id => {
+                                                const p = getPersonnelById(id);
+                                                return p ? <Badge key={id} variant="secondary">{p.lastName} {p.firstName}</Badge> : null;
+                                            })}
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                             <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
-                                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                                    <Clock className="h-4 w-4" />
-                                    <span>{mission.totalHours || 0} Heures totales</span>
-                                </div>
-                                {mission.kilometers > 0 && (
+                                {mission.totalHours > 0 && (
+                                    <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                        <Clock className="h-4 w-4" />
+                                        <span>{mission.totalHours || 0} Heures totales</span>
+                                    </div>
+                                )}
+                                {mission.kilometers && mission.kilometers > 0 && (
                                     <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                                         <Car className="h-4 w-4" />
                                         <span>{mission.kilometers} km ({mission.vehicle})</span>
@@ -182,20 +188,26 @@ export default function MissionsPage() {
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="flex-grow">
-                               <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
-                                <div className="flex flex-wrap gap-2">
-                                    {mission.personnelIds.map(id => {
-                                        const p = getPersonnelById(id);
-                                        return p ? <Badge key={id} variant="outline">{p.lastName} {p.firstName}</Badge> : null;
-                                    })}
-                                </div>
+                               {mission.personnelIds && mission.personnelIds.length > 0 && (
+                                   <>
+                                      <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {mission.personnelIds.map(id => {
+                                                const p = getPersonnelById(id);
+                                                return p ? <Badge key={id} variant="outline">{p.lastName} {p.firstName}</Badge> : null;
+                                            })}
+                                        </div>
+                                   </>
+                               )}
                             </CardContent>
                             <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
-                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{mission.totalHours || 0} Heures totales</span>
-                                </div>
-                                {mission.kilometers > 0 && (
+                                {mission.totalHours > 0 && (
+                                    <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                                        <Clock className="h-3 w-3" />
+                                        <span>{mission.totalHours || 0} Heures totales</span>
+                                    </div>
+                                )}
+                                {mission.kilometers && mission.kilometers > 0 && (
                                     <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
                                         <Car className="h-3 w-3" />
                                         <span>{mission.kilometers} km ({mission.vehicle})</span>
