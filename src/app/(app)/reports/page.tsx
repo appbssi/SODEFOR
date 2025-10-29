@@ -54,7 +54,7 @@ export default function ReportsPage() {
   const [reportData, setReportData] = useState<any[]>([]);
   const [daysOfMonth, setDaysOfMonth] = useState<Date[]>([]);
   const [isExporting, setIsExporting] = useState(false);
-  const reportTableRef = useRef<HTMLDivElement>(null);
+  const reportContainerRef = useRef<HTMLDivElement>(null);
 
 
   const handleGenerateReport = () => {
@@ -76,13 +76,21 @@ export default function ReportsPage() {
         );
         return record ? record.status : 'N/A';
       });
-      return { ...person, attendance: personAttendance };
+
+      const summary = {
+        present: personAttendance.filter(s => s === 'present').length,
+        absent: personAttendance.filter(s => s === 'absent').length,
+        mission: personAttendance.filter(s => s === 'mission').length,
+        permission: personAttendance.filter(s => s === 'permission').length,
+      };
+
+      return { ...person, attendance: personAttendance, summary };
     });
     setReportData(data);
   };
   
   const handleExportPDF = async () => {
-    if (!reportTableRef.current || reportData.length === 0) {
+    if (!reportContainerRef.current || reportData.length === 0) {
       toast({
         title: 'Aucun rapport à exporter',
         description: 'Veuillez d\'abord générer un rapport.',
@@ -94,7 +102,7 @@ export default function ReportsPage() {
     setIsExporting(true);
 
     try {
-        const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
+        const canvas = await html2canvas(reportContainerRef.current, { scale: 2 });
         const imgData = canvas.toDataURL('image/png');
         
         const pdf = new jsPDF({
@@ -114,9 +122,14 @@ export default function ReportsPage() {
         const imgProps = pdf.getImageProperties(imgData);
         const imgWidth = pdfWidth - 20; // margins
         const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-        let position = 25;
+        let position = 20;
 
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        if (imgHeight > pdfHeight - 30) {
+           position = 10;
+           pdf.addImage(imgData, 'PNG', 10, position, imgWidth, pdfHeight - 20);
+        } else {
+            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        }
         
         pdf.save(`rapport_presence_${monthLabel.replace(' ', '_')}.pdf`);
         
@@ -180,34 +193,64 @@ export default function ReportsPage() {
         </div>
 
         {reportData.length > 0 ? (
-          <div ref={reportTableRef} id="report-table" className="overflow-x-auto relative border rounded-lg bg-card p-4">
-             <h3 className="text-lg font-semibold text-center mb-4">
-                Rapport de Présence - {monthOptions.find(m => m.value === selectedMonth)?.label}
-            </h3>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="sticky left-0 bg-card z-10 w-[200px]">Nom</TableHead>
-                  {daysOfMonth.map(day => (
-                    <TableHead key={day.toString()} className="text-center min-w-[50px]">{format(day, 'd')}</TableHead>
-                  ))}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {reportData.map(person => (
-                  <TableRow key={person.id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
-                    {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
-                      <TableCell key={index} className="text-center">
-                        {status !== 'N/A' ? (
-                          <span title={statusTooltips[status as AttendanceStatus]}>{statusIcons[status as AttendanceStatus]}</span>
-                        ) : <span className="text-muted-foreground">-</span>}
-                      </TableCell>
+          <div ref={reportContainerRef} className="space-y-8">
+            <div id="report-table-details" className="overflow-x-auto relative border rounded-lg bg-card p-4">
+              <h3 className="text-lg font-semibold text-center mb-4">
+                  Détails de Présence - {monthOptions.find(m => m.value === selectedMonth)?.label}
+              </h3>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="sticky left-0 bg-card z-10 w-[200px]">Nom</TableHead>
+                    {daysOfMonth.map(day => (
+                      <TableHead key={day.toString()} className="text-center min-w-[50px]">{format(day, 'd')}</TableHead>
                     ))}
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {reportData.map(person => (
+                    <TableRow key={person.id}>
+                      <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
+                      {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
+                        <TableCell key={index} className="text-center">
+                          {status !== 'N/A' ? (
+                            <span title={statusTooltips[status as AttendanceStatus]}>{statusIcons[status as AttendanceStatus]}</span>
+                          ) : <span className="text-muted-foreground">-</span>}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            <div id="report-table-summary" className="border rounded-lg bg-card p-4">
+                <h3 className="text-lg font-semibold text-center mb-4">
+                    Récapitulatif Mensuel - {monthOptions.find(m => m.value === selectedMonth)?.label}
+                </h3>
+                <Table>
+                    <TableHeader>
+                        <TableRow>
+                            <TableHead className="w-[250px]">Nom</TableHead>
+                            <TableHead className="text-center">Présences</TableHead>
+                            <TableHead className="text-center">Absences</TableHead>
+                            <TableHead className="text-center">Missions</TableHead>
+                            <TableHead className="text-center">Permissions</TableHead>
+                        </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                        {reportData.map(person => (
+                            <TableRow key={person.id}>
+                                <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
+                                <TableCell className="text-center font-semibold">{person.summary.present}</TableCell>
+                                <TableCell className="text-center font-semibold">{person.summary.absent}</TableCell>
+                                <TableCell className="text-center font-semibold">{person.summary.mission}</TableCell>
+                                <TableCell className="text-center font-semibold">{person.summary.permission}</TableCell>
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                </Table>
+            </div>
           </div>
         ) : (
             <div className="text-center py-10 text-muted-foreground">
@@ -218,5 +261,3 @@ export default function ReportsPage() {
     </Card>
   );
 }
-
-    
