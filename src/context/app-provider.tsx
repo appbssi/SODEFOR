@@ -45,7 +45,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [firestore]);
 
   const { data: personnelData, isLoading: personnelLoading } = useCollection<Personnel>(personnelQuery);
-  const personnel = personnelData || [];
+  const personnel = (personnelData || []).sort((a, b) => a.lastName.localeCompare(b.lastName));
 
   const today = new Date().toISOString().split('T')[0];
   const attendanceQuery = useMemoFirebase(() => {
@@ -336,5 +336,7 @@ export function useApp() {
   }
   return context;
 }
+
+    
 
     

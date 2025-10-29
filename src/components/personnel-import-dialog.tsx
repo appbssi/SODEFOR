@@ -114,7 +114,7 @@ export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDia
             <AlertDescription>
                 <p className="font-semibold">Format attendu :</p>
                 <code className="block whitespace-pre-wrap text-xs rounded-sm bg-muted p-2 mt-2">
-                    {`matricule | firstName | lastName | rank    | contact    | address      | email\nM123      | Jean      | Dupont   | Sergent | 0123456789 | 1 Rue de...  | jean@...`}
+                    {`lastName  | firstName | matricule | rank    | contact    | address      | email\nDupont    | Jean      | M123      | Sergent | 0123456789 | 1 Rue de...  | jean@...`}
                 </code>
             </AlertDescription>
           </Alert>
@@ -132,3 +132,5 @@ export function PersonnelImportDialog({ open, onOpenChange }: PersonnelImportDia
     </Dialog>
   );
 }
+
+    
