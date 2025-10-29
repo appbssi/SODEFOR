@@ -119,14 +119,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   };
   
   const addMission = async (missionData: Omit<Mission, 'id'>) => {
-    if (!firestore) return;
-    
-    const batch = writeBatch(firestore);
+    if (!firestore) {
+      console.error("Firestore not available");
+      return Promise.reject(new Error("Firestore not available"));
+    }
     
     // 1. Add mission document
     const missionCollection = collection(firestore, 'missions');
-    const newMissionRef = doc(missionCollection);
-    batch.set(newMissionRef, missionData);
+    const newMissionRef = await addDocumentNonBlocking(missionCollection, missionData);
+
+    if (!newMissionRef) {
+      // This can happen if non-blocking operation fails silently before getting a ref.
+      // Or in our mock scenario if we have issues.
+      return Promise.reject(new Error("Could not create mission document."));
+    }
 
     // 2. Update attendance for each person for the day of the mission
     missionData.personnelIds.forEach(personnelId => {
@@ -138,10 +144,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
         status: 'mission' as const,
         missionId: newMissionRef.id,
       };
-      batch.set(attendanceDocRef, attendanceRecord, { merge: true });
+      setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
     });
 
-    await batch.commit();
+    return Promise.resolve();
   };
 
   const validateTodaysAttendance = () => {
