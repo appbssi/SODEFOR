@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDaysInMonth, format } from 'date-fns';
+import { getDaysInMonth, format, isWithinInterval, startOfDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -48,7 +48,7 @@ const statusTooltips: { [key in AttendanceStatus]: string } = {
 };
 
 export default function ReportsPage() {
-  const { personnel, attendance } = useApp();
+  const { personnel, attendance, missions } = useApp();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [reportData, setReportData] = useState<any[]>([]);
@@ -71,10 +71,34 @@ export default function ReportsPage() {
     const data = personnel.map(person => {
       const personAttendance = days.map(day => {
         const dayString = format(day, 'yyyy-MM-dd');
-        const record = attendance.find(
+        
+        let record = attendance.find(
           a => a.personnelId === person.id && a.date === dayString
         );
-        return record ? record.status : 'N/A';
+
+        if (record) {
+          return record.status;
+        }
+
+        const missionRecord = attendance.find(a => 
+            a.personnelId === person.id && a.status === 'mission' && a.date === dayString && a.missionId
+        );
+        const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
+        if(activeMission) return 'mission';
+
+        const onPermission = attendance.some(a => {
+            if (a.personnelId === person.id && a.permissionDuration?.start && a.permissionDuration?.end) {
+                try {
+                    const start = startOfDay(parseISO(a.permissionDuration.start));
+                    const end = startOfDay(parseISO(a.permissionDuration.end));
+                    return isWithinInterval(startOfDay(day), { start, end });
+                } catch { return false }
+            }
+            return false;
+        });
+        if(onPermission) return 'permission';
+        
+        return 'present'; // Default to present
       });
 
       const summary = {

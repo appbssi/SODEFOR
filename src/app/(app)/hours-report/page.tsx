@@ -27,7 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDaysInMonth, format } from 'date-fns';
+import { getDaysInMonth, format, isWithinInterval, startOfDay, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -43,7 +43,7 @@ const HOURS_PER_STATUS: { [key in AttendanceStatus | 'N/A']: number } = {
 };
 
 export default function HoursReportPage() {
-  const { personnel, attendance } = useApp();
+  const { personnel, attendance, missions } = useApp();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
   const [reportData, setReportData] = useState<any[]>([]);
@@ -66,10 +66,40 @@ export default function HoursReportPage() {
       let totalHours = 0;
       const personAttendance = days.map(day => {
         const dayString = format(day, 'yyyy-MM-dd');
+        
+        let status: AttendanceStatus | 'N/A' = 'N/A';
         const record = attendance.find(
           a => a.personnelId === person.id && a.date === dayString
         );
-        const status = record ? record.status : 'N/A';
+
+        if(record) {
+            status = record.status;
+        } else {
+            const missionRecord = attendance.find(a => 
+                a.personnelId === person.id && a.status === 'mission' && a.date === dayString && a.missionId
+            );
+            const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
+            if(activeMission) {
+                status = 'mission';
+            } else {
+                const onPermission = attendance.some(a => {
+                    if (a.personnelId === person.id && a.permissionDuration?.start && a.permissionDuration?.end) {
+                        try {
+                            const start = startOfDay(parseISO(a.permissionDuration.start));
+                            const end = startOfDay(parseISO(a.permissionDuration.end));
+                            return isWithinInterval(startOfDay(day), { start, end });
+                        } catch { return false }
+                    }
+                    return false;
+                });
+                if(onPermission) {
+                    status = 'permission';
+                } else {
+                    status = 'present'; // Default to present
+                }
+            }
+        }
+        
         const hours = HOURS_PER_STATUS[status];
         totalHours += hours;
         return hours;
@@ -226,5 +256,3 @@ export default function HoursReportPage() {
     </Card>
   );
 }
-
-    
