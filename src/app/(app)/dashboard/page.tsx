@@ -59,15 +59,6 @@ export default function DashboardPage() {
     return null;
   }
   
-  const presentCount = todaysAttendance.filter(a => {
-    if (a.status === 'mission') {
-      const mission = missions.find(m => m.id === a.missionId);
-      // If mission is completed, count as present
-      return mission?.status === 'completed'; 
-    }
-    return a.status === 'present';
-  }).length;
-
   const missionCount = todaysAttendance.filter(a => {
     if (a.status === 'mission') {
       const mission = missions.find(m => m.id === a.missionId);
@@ -79,6 +70,12 @@ export default function DashboardPage() {
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
+  // A person is present if:
+  // 1. Their status is 'present'
+  // 2. Their mission is 'completed'
+  // 3. They have no attendance record for today (and are not on mission/absent/permission)
+  const presentCount = totalPersonnel - missionCount - absentCount - permissionCount;
+
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
     { title: 'Présents au Service', value: presentCount, icon: UserCheck, color: 'text-green-600' },
