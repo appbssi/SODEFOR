@@ -61,8 +61,8 @@ export default function PersonnelPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Matricule</TableHead>
                 <TableHead>Nom Complet</TableHead>
+                <TableHead>Matricule</TableHead>
                 <TableHead>Grade</TableHead>
                 <TableHead className="hidden md:table-cell">Contact</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
@@ -72,8 +72,8 @@ export default function PersonnelPage() {
               {loading ? (
                 Array.from({ length: 5 }).map((_, i) => (
                   <TableRow key={i}>
-                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
@@ -81,8 +81,8 @@ export default function PersonnelPage() {
                 ))
               ) : personnel.map((person: Personnel) => (
                 <TableRow key={person.id}>
-                  <TableCell className="font-medium">{person.matricule}</TableCell>
                   <TableCell>{person.lastName} {person.firstName}</TableCell>
+                  <TableCell className="font-medium">{person.matricule}</TableCell>
                   <TableCell>{person.rank}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.email}</TableCell>
