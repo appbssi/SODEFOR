@@ -54,6 +54,12 @@ import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Lock, LockOpen } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
@@ -184,10 +190,19 @@ export default function AttendancePage() {
                     </AlertDialog>
                 )}
                 {isValidated && !loading && (
-                    <Button onClick={handleReactivation} variant="secondary" className="gap-2">
-                      <LockOpen className="h-4 w-4" />
-                      Réactiver les modifications
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                           <Button onClick={handleReactivation} variant="secondary" size="icon">
+                              <LockOpen className="h-4 w-4" />
+                              <span className="sr-only">Réactiver les modifications</span>
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Réactiver les modifications</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                 )}
               </div>
           </div>
