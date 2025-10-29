@@ -1,38 +1,101 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a security model where all data access is open.
+ * @fileoverview Firestore Security Rules for Prototyping.
+ *
+ * Core Philosophy:
+ * This ruleset prioritizes security by enforcing strict data ownership and explicit access controls.
+ * Data validation is relaxed to facilitate rapid prototyping and schema iteration.
+ *
  * Data Structure:
- * - /personnel/{personnelId}: Stores information about each personnel member.
- * - /attendance/{attendanceId}: Stores attendance records for each personnel member. The ID is a composite of personnelId and date.
+ * - /personnel/{personnelId}: Stores personnel information. Each document is owned by the user with the matching personnelId.
+ * - /attendance/{attendanceId}: Stores attendance records. The ID is a composite of personnelId and date.  Write access is restricted to only authenticated users.
+ * - /dailyStatus/{day}: Stores the validation status for a specific day.  Read is public and only authenticated users can modify data.
+ *
  * Key Security Decisions:
- * - All reads are public (get, list).
- * - All writes are allowed (create, update, delete).
+ * - User listing is disabled.
+ * - Data validation is minimal (only ownership and relationship validation).
+ * - Write access requires authentication.
+ *
+ * Denormalization for Authorization:
+ * - The personnelId is used for ownership checks in the /personnel/{personnelId} collection.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+
     /**
-     * @description Allows anyone to read and write personnel data.
+     * @description Controls access to personnel documents.
      * @path /personnel/{personnelId}
-     * @allow (get) Any user can retrieve personnel data.
-     * @deny (create) No condition under which creation is denied.
-     * @principle Allows public read access for all personnel documents.
+     * @allow (create) - Authenticated user creates their own personnel document with matching personnelId.
+     * @allow (get, list, update, delete) - Authenticated user with matching personnelId.
+     * @deny (create) - Unauthenticated user tries to create a document.
+     * @deny (update, delete) - Non-owner tries to modify or delete a document.
+     * @principle Enforces document ownership; only the user with the matching personnelId can read, update, or delete.
      */
     match /personnel/{personnelId} {
-      allow get, list: if true;
-      allow create, update, delete: if true;
+      allow get: if isSignedIn() && isOwner(personnelId);
+      allow list: if false; // Listing is disabled for security reasons.
+      allow create: if isSignedIn() && isOwner(personnelId);
+      allow update: if isSignedIn() && isExistingOwner(personnelId);
+      allow delete: if isSignedIn() && isExistingOwner(personnelId);
     }
 
     /**
-     * @description Allows anyone to read and write attendance data.
+     * @description Controls access to attendance records.
      * @path /attendance/{attendanceId}
-     * @allow (get) Any user can retrieve attendance data.
-     * @deny (create) No condition under which creation is denied.
-     * @principle Allows public read access for all attendance documents.
+     * @allow (create) - Authenticated user can create new attendance records.
+     * @allow (get, list) - Any user can read attendance records.
+     * @allow (update, delete) - Authenticated users can update or delete attendance records.
+     * @deny (create, update, delete) - Unauthenticated user tries to create, update, or delete a document.
+     * @principle Authenticated users can manage attendance records.
      */
     match /attendance/{attendanceId} {
       allow get, list: if true;
-      allow create, update, delete: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    /**
+     * @description Controls access to daily status documents.
+     * @path /dailyStatus/{day}
+     * @allow (get, list) - Any user can read the daily status.
+     * @allow (create, update, delete) - Only authenticated users can create, update, or delete daily status documents.
+     * @deny (create, update, delete) - Unauthenticated user tries to create, update, or delete a document.
+     * @principle Public read, authenticated write access.
+     */
+    match /dailyStatus/{day} {
+      allow get, list: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+    }
+
+    // --- Helper Functions ---
+
+    /**
+     * @description Checks if the user is signed in.
+     * @return {bool} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the document.
+     * @param {string} userId The user ID to check against.
+     * @return {bool} True if the user is the owner, false otherwise.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the user is the owner of the document and the document exists.
+     * @param {string} userId The user ID to check against.
+     * @return {bool} True if the user is the owner and the document exists, false otherwise.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
     }
   }
 }
