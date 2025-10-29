@@ -47,32 +47,22 @@ export default function DashboardPage() {
 
   const totalPersonnel = personnel.length;
 
-  const getMissionForPersonnel = (personnelId: string) => {
-    const attendanceRecord = todaysAttendance.find(a => a.personnelId === personnelId);
-    if(attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
-        const mission = missions.find(m => m.id === attendanceRecord.missionId);
-        // Only return the mission if it's active
-        if (mission && mission.status !== 'completed') {
-          return mission;
+  const missionCount = useMemo(() => {
+    return personnel.filter(p => {
+        const attendanceRecord = todaysAttendance.find(a => a.personnelId === p.id);
+        if (attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
+            const mission = missions.find(m => m.id === attendanceRecord.missionId);
+            return mission?.status !== 'completed';
         }
-    }
-    return null;
-  }
-  
-  const missionCount = todaysAttendance.filter(a => {
-    if (a.status === 'mission') {
-      const mission = missions.find(m => m.id === a.missionId);
-      return mission?.status !== 'completed';
-    }
-    return false;
-  }).length;
-  
+        return false;
+    }).length;
+  }, [personnel, todaysAttendance, missions]);
+
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
   // A person is present if they are not absent, on mission, or on permission.
   const presentCount = totalPersonnel - missionCount - absentCount - permissionCount;
-
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
