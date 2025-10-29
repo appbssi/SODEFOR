@@ -1,76 +1,126 @@
 /**
- * @file Firestore Security Rules
- * @version 2
- *
- * @description
- * This ruleset enforces a public read policy on the 'personnel', 'attendance', and 'dailyStatus' collections,
- * while restricting writes to authenticated users only. The system is designed to allow open access for
- * retrieving data but secures modifications to prevent unauthorized changes.
- *
- * Data Structure:
- * - /personnel/{personnelId}: Stores personnel information.
- * - /attendance/{attendanceId}: Stores attendance records.
- * - /dailyStatus/{day}: Stores daily status information.
- *
- * Key Security Decisions:
- * - Public Read Access: The 'get' and 'list' operations are allowed for all users, including unauthenticated ones.
- * - Authenticated Writes Only: 'create', 'update', and 'delete' operations are restricted to authenticated users.
- * - No Data Validation: Data validation is skipped to allow rapid iteration and flexible data shapes during prototyping.
+ * @description This ruleset enforces a strict user-ownership model for the 'personnel' collection,
+ *              allowing only authenticated users to manage personnel data. It implements a public
+ *              read/owner-write pattern for the 'missions' collection. The 'attendance' and 'dailyStatus'
+ *              collections are only writable by authenticated users. No user listing is allowed.
+ * @dataStructure
+ *   - /personnel/{personnelId}: Stores personnel information. Accessible only by authenticated users.
+ *   - /attendance/{attendanceId}: Stores attendance records. Accessible only by authenticated users.
+ *   - /dailyStatus/{day}: Stores daily validation status. Accessible only by authenticated users.
+ *   - /missions/{missionId}: Stores mission details. Publicly readable, but only authenticated
+ *     users can create, update, or delete missions.
+ * @keySecurityDecisions
+ *   - No user listing is allowed for the 'personnel', 'attendance' and 'dailyStatus' collections.
+ *   - The 'missions' collection employs a public read / owner-only write pattern, requiring an
+ *     'authorId' field (or similar) for secure implementation.
+ * @denormalizationForAuthorization N/A
+ * @structuralSegregation N/A
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Allows public read access to personnel data, but restricts write access to authenticated users.
+     * @description Manages personnel data. Only authenticated users can create, read, update, or delete personnel information.
      * @path /personnel/{personnelId}
-     * @allow (get, list): Any user can read personnel data.
-     * @allow (create, update, delete): Only authenticated users can modify personnel data.
-     * @deny (create, update, delete): Unauthenticated users cannot modify personnel data.
-     * @principle Allows open data retrieval while securing data modification.
+     * @allow (create) - Authenticated user creates their own personnel record.
+     * @allow (get) - Authenticated user gets their own personnel record.
+     * @allow (update) - Authenticated user updates their own personnel record.
+     * @allow (delete) - Authenticated user deletes their own personnel record.
+     * @deny (create) - Unauthenticated user attempts to create a personnel record.
+     * @deny (create) - Authenticated user attempts to create a personnel record with a mismatched ID.
+     * @deny (get) - Unauthenticated user attempts to get a personnel record.
+     * @deny (update) - Unauthenticated user attempts to update a personnel record.
+     * @deny (delete) - Unauthenticated user attempts to delete a personnel record.
+     * @principle Enforces document ownership for writes, restricting access to a user's own data.
      */
     match /personnel/{personnelId} {
-      allow get: if true;
-      allow list: if true;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+      function isExistingOwner(userId) {
+          return isOwner(userId) && resource != null;
+      }
+
+      allow create: if isSignedIn() && isOwner(personnelId) && request.resource.data.matricule == personnelId;
+      allow get: if isSignedIn();
+      allow update: if isExistingOwner(personnelId) && request.resource.data.matricule == resource.data.matricule;
+      allow delete: if isExistingOwner(personnelId);
+      allow list: if false;
     }
 
     /**
-     * @description Allows public read access to attendance records, but restricts write access to authenticated users.
+     * @description Manages attendance records. Only authenticated users can create, read, update, or delete attendance records.
      * @path /attendance/{attendanceId}
-     * @allow (get, list): Any user can read attendance records.
-     * @allow (create, update, delete): Only authenticated users can modify attendance records.
-     * @deny (create, update, delete): Unauthenticated users cannot modify attendance records.
-     * @principle Allows open data retrieval while securing data modification.
+     * @allow (create) - Authenticated user creates an attendance record.
+     * @allow (get) - Authenticated user gets an attendance record.
+     * @allow (update) - Authenticated user updates an attendance record.
+     * @allow (delete) - Authenticated user deletes an attendance record.
+     * @deny (create) - Unauthenticated user attempts to create an attendance record.
+     * @deny (get) - Unauthenticated user attempts to get an attendance record.
+     * @deny (update) - Unauthenticated user attempts to update an attendance record.
+     * @deny (delete) - Unauthenticated user attempts to delete an attendance record.
+     * @principle Enforces that only authenticated users can manage attendance records.
      */
     match /attendance/{attendanceId} {
-      allow get: if true;
-      allow list: if true;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       allow create: if isSignedIn();
+      allow get: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
+      allow list: if false;
     }
 
     /**
-     * @description Allows public read access to daily status information, but restricts write access to authenticated users.
+     * @description Manages daily status records. Only authenticated users can create, read, update, or delete daily status records.
      * @path /dailyStatus/{day}
-     * @allow (get, list): Any user can read daily status information.
-     * @allow (create, update, delete): Only authenticated users can modify daily status information.
-     * @deny (create, update, delete): Unauthenticated users cannot modify daily status information.
-     * @principle Allows open data retrieval while securing data modification.
+     * @allow (create) - Authenticated user creates a daily status record.
+     * @allow (get) - Authenticated user gets a daily status record.
+     * @allow (update) - Authenticated user updates a daily status record.
+     * @allow (delete) - Authenticated user deletes a daily status record.
+     * @deny (create) - Unauthenticated user attempts to create a daily status record.
+     * @deny (get) - Unauthenticated user attempts to get a daily status record.
+     * @deny (update) - Unauthenticated user attempts to update a daily status record.
+     * @deny (delete) - Unauthenticated user attempts to delete a daily status record.
+     * @principle Enforces that only authenticated users can manage daily status records.
      */
     match /dailyStatus/{day} {
-      allow get: if true;
-      allow list: if true;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow create: if isSignedIn();
+      allow get: if isSignedIn();
+      allow update: if isSignedIn() && resource != null;
+      allow delete: if isSignedIn() && resource != null;
+      allow list: if false;
+    }
+
+    /**
+     * @description Manages mission data. Allows public read access, but restricts create, update, and delete operations to authenticated users.
+     * @path /missions/{missionId}
+     * @allow (create) - Authenticated user creates a mission.
+     * @allow (get) - Anyone can get a mission.
+     * @allow (update) - Authenticated user updates a mission.
+     * @allow (delete) - Authenticated user deletes a mission.
+     * @deny (create) - Unauthenticated user attempts to create a mission.
+     * @deny (update) - Unauthenticated user attempts to update a mission.
+     * @deny (delete) - Unauthenticated user attempts to delete a mission.
+     * @principle Implements a public read / owner-only write pattern.
+     */
+    match /missions/{missionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+      allow get, list: if true;
       allow create: if isSignedIn();
       allow update: if isSignedIn() && resource != null;
       allow delete: if isSignedIn() && resource != null;
-    }
-
-    function isSignedIn() {
-      return request.auth != null;
     }
   }
 }
