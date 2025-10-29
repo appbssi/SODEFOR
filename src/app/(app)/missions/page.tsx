@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MoreVertical, Car, RefreshCw, Trash2 } from 'lucide-react';
+import { PlusCircle, Clock, MoreVertical, Car, RefreshCw, Trash2, Users } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -36,6 +36,12 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export default function MissionsPage() {
   const { missions, getPersonnelById, loading, updateMission, deleteMission } = useApp();
@@ -148,16 +154,28 @@ export default function MissionsPage() {
                             <CardContent className="flex-grow">
                                 <p className="text-sm mb-4">{mission.description}</p>
                                 {mission.personnelIds && mission.personnelIds.length > 0 && (
-                                    <>
-                                        <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {mission.personnelIds.map(id => {
-                                                const p = getPersonnelById(id);
-                                                return p ? <Badge key={id} variant="secondary">{p.lastName} {p.firstName}</Badge> : null;
-                                            })}
-                                        </div>
-                                    </>
-                                )}
+                                   <TooltipProvider>
+                                     <Tooltip>
+                                       <TooltipTrigger asChild>
+                                         <div className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                                           <Users className="h-4 w-4" />
+                                           <span>{mission.personnelIds.length} agents assignés</span>
+                                         </div>
+                                       </TooltipTrigger>
+                                       <TooltipContent>
+                                         <div className="p-1">
+                                           <h4 className="font-semibold mb-2">Personnel assigné</h4>
+                                           <ul className="list-disc list-inside">
+                                             {mission.personnelIds.map(id => {
+                                               const p = getPersonnelById(id);
+                                               return p ? <li key={id}>{p.lastName} {p.firstName}</li> : null;
+                                             })}
+                                           </ul>
+                                         </div>
+                                       </TooltipContent>
+                                     </Tooltip>
+                                   </TooltipProvider>
+                                 )}
                             </CardContent>
                             <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
                                 {mission.totalHours > 0 && (
@@ -224,15 +242,27 @@ export default function MissionsPage() {
                             </CardHeader>
                             <CardContent className="flex-grow">
                                {mission.personnelIds && mission.personnelIds.length > 0 && (
-                                   <>
-                                      <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
-                                        <div className="flex flex-wrap gap-2">
-                                            {mission.personnelIds.map(id => {
-                                                const p = getPersonnelById(id);
-                                                return p ? <Badge key={id} variant="outline">{p.lastName} {p.firstName}</Badge> : null;
-                                            })}
-                                        </div>
-                                   </>
+                                   <TooltipProvider>
+                                     <Tooltip>
+                                       <TooltipTrigger asChild>
+                                         <div className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                                           <Users className="h-4 w-4" />
+                                           <span>{mission.personnelIds.length} agents</span>
+                                         </div>
+                                       </TooltipTrigger>
+                                       <TooltipContent>
+                                         <div className="p-1">
+                                           <h4 className="font-semibold mb-2">Personnel assigné</h4>
+                                           <ul className="list-disc list-inside">
+                                             {mission.personnelIds.map(id => {
+                                               const p = getPersonnelById(id);
+                                               return p ? <li key={id}>{p.lastName} {p.firstName}</li> : null;
+                                             })}
+                                           </ul>
+                                         </div>
+                                       </TooltipContent>
+                                     </Tooltip>
+                                   </TooltipProvider>
                                )}
                             </CardContent>
                             <CardFooter className="pt-4 flex-wrap gap-x-4 gap-y-2">
