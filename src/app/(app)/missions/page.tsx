@@ -241,6 +241,7 @@ export default function MissionsPage() {
                                 </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
+                               <p className="text-sm mb-4">{mission.description}</p>
                                {mission.personnelIds && mission.personnelIds.length > 0 && (
                                    <TooltipProvider>
                                      <Tooltip>
