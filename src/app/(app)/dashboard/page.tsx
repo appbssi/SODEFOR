@@ -48,15 +48,15 @@ export default function DashboardPage() {
   const totalPersonnel = personnel.length;
 
   const missionCount = useMemo(() => {
-    // Count unique personnel across all active missions for today
+    // Count unique personnel across all active missions
     const personnelInActiveMissions = new Set<string>();
     missions
-      .filter(m => m.status !== 'completed' && m.date === today)
+      .filter(m => m.status !== 'completed')
       .forEach(m => {
         m.personnelIds.forEach(id => personnelInActiveMissions.add(id));
       });
     return personnelInActiveMissions.size;
-  }, [missions, today]);
+  }, [missions]);
   
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
