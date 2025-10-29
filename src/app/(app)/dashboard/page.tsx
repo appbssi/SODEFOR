@@ -70,11 +70,9 @@ export default function DashboardPage() {
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
-  // A person is present if:
-  // 1. Their status is 'present'
-  // 2. Their mission is 'completed'
-  // 3. They have no attendance record for today (and are not on mission/absent/permission)
+  // A person is present if they are not absent, on mission, or on permission.
   const presentCount = totalPersonnel - missionCount - absentCount - permissionCount;
+
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
