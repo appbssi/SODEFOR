@@ -178,20 +178,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   }, [mission, open]);
   
   const totalHours = useMemo(() => {
-    if (startTime && endTime && selectedPersonnelIds.length > 0) {
-      try {
-        const startDate = parse(startTime, 'HH:mm', new Date());
-        const endDate = parse(endTime, 'HH:mm', new Date());
-        if (endDate > startDate) {
-          const duration = differenceInHours(endDate, startDate);
-          return duration * selectedPersonnelIds.length;
-        }
-      } catch (e) {
-        return 0;
-      }
-    }
-    return 0;
-  }, [startTime, endTime, selectedPersonnelIds]);
+    return selectedPersonnelIds.length * 8;
+  }, [selectedPersonnelIds]);
 
   const handleNameChange = (newName: string) => {
     setName(newName);
