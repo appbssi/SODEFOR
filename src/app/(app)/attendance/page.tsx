@@ -286,8 +286,8 @@ export default function AttendancePage() {
                           <SelectValue placeholder="Changer statut..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {statusOptions.map(option => (
-                            <SelectItem key={option.value} value={option.value} disabled={option.value === 'mission'}>
+                          {statusOptions.filter(o => o.value !== 'mission').map(option => (
+                            <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
                           ))}
