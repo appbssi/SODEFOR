@@ -138,30 +138,8 @@ export default function DashboardPage() {
             </Card>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-full lg:col-span-4">
-          <CardHeader>
-            <CardTitle>Aperçu du jour</CardTitle>
-            <CardDescription>Répartition du statut du personnel pour aujourd'hui.</CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-             <ChartContainer config={chartConfig} className="min-h-[250px] w-full">
-              <PieChart>
-                <ChartTooltip
-                  cursor={false}
-                  content={<ChartTooltipContent hideLabel />}
-                />
-                <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={60} strokeWidth={5}>
-                   {chartData.map((entry) => (
-                    <Cell key={`cell-${entry.name}`} fill={entry.fill} />
-                  ))}
-                </Pie>
-                <ChartLegend content={<ChartLegendContent nameKey="name" />} />
-              </PieChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-        <Card className="col-span-full lg:col-span-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+        <Card className="col-span-full">
           <CardHeader>
             <CardTitle>Activité Récente</CardTitle>
             <CardDescription>Mises à jour du statut d'aujourd'hui.</CardDescription>
@@ -207,5 +185,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
-    
