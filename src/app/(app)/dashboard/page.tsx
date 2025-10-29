@@ -32,14 +32,12 @@ const STATUS_TRANSLATION: { [key: string]: string } = {
   present: 'Présent',
   absent: 'Absent',
   mission: 'En Mission',
-  permission: 'En Permission',
 };
 
 const COLORS: { [key: string]: string } = {
   present: 'hsl(var(--chart-2))',
   absent: 'hsl(var(--chart-5))',
   mission: 'hsl(var(--chart-4))',
-  permission: 'hsl(var(--chart-1))',
 };
 
 export default function DashboardPage() {
@@ -103,6 +101,8 @@ export default function DashboardPage() {
   const missionCount = personnelInActiveMissions.size;
   const permissionCount = personnelOnPermission.size;
   const absentCount = absentPersonnel.size;
+  
+  // A person is present if they are not in the unavailable set.
   const presentCount = totalPersonnel - unavailablePersonnel.size;
 
 
@@ -110,15 +110,13 @@ export default function DashboardPage() {
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
     { title: 'Absents', value: absentCount, icon: UserX, color: 'text-red-600' },
     { title: 'En Mission', value: missionCount, icon: Plane, color: 'text-blue-600' },
-    { title: 'En Permission', value: permissionCount, icon: Coffee, color: 'text-yellow-600' },
   ];
 
   const chartData = useMemo(() => [
     { name: 'Présents', value: Math.max(0, presentCount), fill: COLORS.present },
     { name: 'Absents', value: absentCount, fill: COLORS.absent },
     { name: 'En Mission', value: missionCount, fill: COLORS.mission },
-    { name: 'En Permission', value: permissionCount, fill: COLORS.permission },
-  ].filter(d => d.value > 0), [presentCount, absentCount, missionCount, permissionCount]);
+  ].filter(d => d.value > 0), [presentCount, absentCount, missionCount]);
 
   const chartConfig = useMemo(() => {
     return chartData.reduce((acc, item) => {
@@ -188,6 +186,8 @@ export default function DashboardPage() {
                  if (!Icon) return null;
 
                  const translatedStatus = STATUS_TRANSLATION[displayStatus];
+                 if (!translatedStatus) return null;
+
                  const color = chartConfig[translatedStatus]?.color || '#ccc';
 
                  return (
