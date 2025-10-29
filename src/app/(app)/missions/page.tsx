@@ -82,8 +82,9 @@ export default function MissionsPage() {
     }
   };
 
-  const upcomingMissions = missions.filter(m => m.status !== 'completed');
-  const pastMissions = missions.filter(m => m.status === 'completed');
+  const tpphtMissions = missions.filter(m => m.personnelIds && m.personnelIds.length > 0);
+  const upcomingMissions = tpphtMissions.filter(m => m.status !== 'completed');
+  const pastMissions = tpphtMissions.filter(m => m.status === 'completed');
 
 
   return (
