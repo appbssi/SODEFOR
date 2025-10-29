@@ -9,7 +9,7 @@ import {
 } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
 import type { Personnel } from '@/types';
-import { Users, UserCheck, UserX, Plane, Coffee } from 'lucide-react';
+import { Users, UserCheck, UserX, Plane } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -25,7 +25,6 @@ const ICONS: { [key: string]: React.ElementType } = {
   present: UserCheck,
   absent: UserX,
   mission: Plane,
-  permission: Coffee,
 };
 
 const STATUS_TRANSLATION: { [key: string]: string } = {
@@ -61,7 +60,10 @@ export default function DashboardPage() {
   const personnelOnPermission = useMemo(() => {
     const todayDate = startOfDay(new Date());
     const personnelIds = new Set<string>();
-    const allPermissionRecords = attendance.filter(a => a.status === 'permission');
+    const allPermissionRecords = attendance.filter(a => 
+        (a.status === 'permission' && a.date === today) || 
+        (a.permissionDuration?.start && a.permissionDuration?.end)
+    );
     
     allPermissionRecords.forEach(record => {
       if (record.permissionDuration && record.permissionDuration.start && record.permissionDuration.end) {
@@ -74,8 +76,7 @@ export default function DashboardPage() {
         } catch (e) {
           console.error("Invalid permission date format:", record);
         }
-      } else if (record.date === today) {
-        // This handles single-day permissions recorded today.
+      } else if (record.status === 'permission' && record.date === today) {
         personnelIds.add(record.personnelId);
       }
     });
@@ -101,7 +102,6 @@ export default function DashboardPage() {
   const missionCount = personnelInActiveMissions.size;
   const absentCount = absentPersonnel.size;
   const presentCount = totalPersonnel - unavailablePersonnel.size;
-
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
