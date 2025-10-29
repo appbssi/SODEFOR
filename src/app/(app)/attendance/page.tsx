@@ -100,7 +100,7 @@ export default function AttendancePage() {
       const person = getPersonnelById(personnelId);
       toast({
         title: 'Statut mis à jour',
-        description: `${person?.firstName} ${person?.lastName} est maintenant ${statusOptions.find(s=> s.value === newStatus)?.label}.`,
+        description: `${person?.lastName} ${person?.firstName} est maintenant ${statusOptions.find(s=> s.value === newStatus)?.label}.`,
       });
     }
   };
@@ -118,7 +118,7 @@ export default function AttendancePage() {
       });
       toast({
         title: 'Statut mis à jour',
-        description: `${selectedPersonnel.firstName} ${selectedPersonnel.lastName} est maintenant en permission.`,
+        description: `${selectedPersonnel.lastName} ${selectedPersonnel.firstName} est maintenant en permission.`,
       });
       setPermissionModalOpen(false);
       setSelectedPersonnel(null);
@@ -240,7 +240,7 @@ export default function AttendancePage() {
                 const currentStatusRecord = getStatusForPersonnel(person.id);
                 return (
                   <TableRow key={person.id}>
-                    <TableCell className="font-medium">{person.firstName} {person.lastName}</TableCell>
+                    <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
                     <TableCell>{person.rank}</TableCell>
                     <TableCell>
                       {currentStatusRecord ? (
@@ -282,7 +282,7 @@ export default function AttendancePage() {
           <DialogHeader>
             <DialogTitle>Définir la durée de la permission</DialogTitle>
             <DialogDescription>
-              Pour {selectedPersonnel?.firstName} {selectedPersonnel?.lastName}.
+              Pour {selectedPersonnel?.lastName} {selectedPersonnel?.firstName}.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

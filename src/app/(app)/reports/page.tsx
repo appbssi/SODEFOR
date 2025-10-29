@@ -145,7 +145,7 @@ export default function ReportsPage() {
   const monthOptions = useMemo(() => {
     const options = [];
     const today = new Date();
-    for (let i = 0; i < 12; i++) {
+    for (let i = 0; i < 24; i++) { // Increased to 24 months
         const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
         options.push({
             value: format(date, 'yyyy-MM'),
@@ -198,7 +198,7 @@ export default function ReportsPage() {
               <TableBody>
                 {reportData.map(person => (
                   <TableRow key={person.id}>
-                    <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.firstName} {person.lastName}</TableCell>
+                    <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
                     {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
                       <TableCell key={index} className="text-center">
                         {status !== 'N/A' ? (

@@ -82,7 +82,7 @@ export default function PersonnelPage() {
               ) : personnel.map((person: Personnel) => (
                 <TableRow key={person.id}>
                   <TableCell className="font-medium">{person.matricule}</TableCell>
-                  <TableCell>{person.firstName} {person.lastName}</TableCell>
+                  <TableCell>{person.lastName} {person.firstName}</TableCell>
                   <TableCell>{person.rank}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.email}</TableCell>

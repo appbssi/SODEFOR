@@ -129,7 +129,7 @@ export default function DashboardPage() {
                         <Icon className="h-5 w-5" style={{color: color}} />
                      </div>
                      <div className="flex-grow">
-                       <p className="font-medium">{person.firstName} {person.lastName}</p>
+                       <p className="font-medium">{person.lastName} {person.firstName}</p>
                        <p className="text-sm text-muted-foreground">{STATUS_TRANSLATION[record.status]}</p>
                      </div>
                    </div>
