@@ -8,7 +8,7 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
-import { Users, UserCheck, UserX, Plane, Coffee, PersonStanding } from 'lucide-react';
+import { Users, UserCheck, UserX, Plane, Coffee } from 'lucide-react';
 import {
   ChartContainer,
   ChartTooltip,
@@ -41,14 +41,42 @@ const COLORS: { [key: string]: string } = {
 };
 
 export default function DashboardPage() {
-  const { personnel, getAttendanceForDate, getPersonnelById } = useApp();
+  const { personnel, getAttendanceForDate, getPersonnelById, missions } = useApp();
   const today = new Date().toISOString().split('T')[0];
   const todaysAttendance = getAttendanceForDate(today);
 
   const totalPersonnel = personnel.length;
-  const presentCount = todaysAttendance.filter(a => a.status === 'present').length;
+
+  const getMissionForPersonnel = (personnelId: string) => {
+    const attendanceRecord = todaysAttendance.find(a => a.personnelId === personnelId);
+    if(attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
+        const mission = missions.find(m => m.id === attendanceRecord.missionId);
+        // Only return the mission if it's active
+        if (mission && mission.status !== 'completed') {
+          return mission;
+        }
+    }
+    return null;
+  }
+  
+  const presentCount = todaysAttendance.filter(a => {
+    if (a.status === 'mission') {
+      const mission = missions.find(m => m.id === a.missionId);
+      // If mission is completed, count as present
+      return mission?.status === 'completed'; 
+    }
+    return a.status === 'present';
+  }).length;
+
+  const missionCount = todaysAttendance.filter(a => {
+    if (a.status === 'mission') {
+      const mission = missions.find(m => m.id === a.missionId);
+      return mission?.status !== 'completed';
+    }
+    return false;
+  }).length;
+  
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
-  const missionCount = todaysAttendance.filter(a => a.status === 'mission').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
   const stats = [
@@ -121,8 +149,21 @@ export default function DashboardPage() {
               {todaysAttendance.length > 0 ? todaysAttendance.slice(0,5).map(record => {
                  const person = getPersonnelById(record.personnelId);
                  if (!person) return null;
-                 const Icon = ICONS[record.status];
-                 const color = chartConfig[STATUS_TRANSLATION[record.status]]?.color || '#ccc';
+
+                 let displayStatus = record.status;
+                 if (record.status === 'mission') {
+                   const mission = missions.find(m => m.id === record.missionId);
+                   if (mission?.status === 'completed') {
+                     displayStatus = 'present';
+                   }
+                 }
+
+                 const Icon = ICONS[displayStatus];
+                 if (!Icon) return null;
+
+                 const translatedStatus = STATUS_TRANSLATION[displayStatus];
+                 const color = chartConfig[translatedStatus]?.color || '#ccc';
+
                  return (
                    <div key={record.personnelId} className="flex items-center gap-4">
                      <div className="p-2 rounded-full" style={{backgroundColor: `${color}20`}}>
@@ -130,7 +171,7 @@ export default function DashboardPage() {
                      </div>
                      <div className="flex-grow">
                        <p className="font-medium">{person.lastName} {person.firstName}</p>
-                       <p className="text-sm text-muted-foreground">{STATUS_TRANSLATION[record.status]}</p>
+                       <p className="text-sm text-muted-foreground">{translatedStatus}</p>
                      </div>
                    </div>
                  )
