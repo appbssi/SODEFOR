@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { Personnel, AttendanceRecord, DailyStatus, Mission } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 import {
   addDocumentNonBlocking,
   setDocumentNonBlocking,
@@ -12,7 +12,7 @@ import {
   deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { getDaysBetweenDates } from '@/lib/utils';
-import { isWithinInterval, parseISO, startOfDay } from 'date-fns';
+import { isWithinInterval, parseISO, startOfDay, parse } from 'date-fns';
 
 interface AppContextType {
   personnel: Personnel[];
@@ -70,6 +70,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [firestore, today]);
 
   const { data: todaysStatus, isLoading: statusLoading } = useDoc<DailyStatus>(todaysStatusRef);
+
+  // Auto-complete missions
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      const activeMissions = missions.filter(m => m.status === 'active' && m.endTime);
+      
+      activeMissions.forEach(mission => {
+        if (mission.date && mission.endTime) {
+          const [hours, minutes] = mission.endTime.split(':').map(Number);
+          const missionEndDateTime = new Date(mission.date);
+          missionEndDateTime.setHours(hours, minutes, 0, 0);
+
+          if (now > missionEndDateTime) {
+            updateMission(mission.id, { status: 'completed' });
+          }
+        }
+      });
+    }, 60000); // Check every minute
+
+    return () => clearInterval(intervalId);
+  }, [missions]);
+
 
   const addPersonnel = (person: Omit<Personnel, 'id'>) => {
     if (!firestore) return;
@@ -313,3 +336,5 @@ export function useApp() {
   }
   return context;
 }
+
+    
