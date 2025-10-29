@@ -108,7 +108,6 @@ export default function DashboardPage() {
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
-    { title: 'Présents au Service', value: presentCount, icon: UserCheck, color: 'text-green-600' },
     { title: 'Absents', value: absentCount, icon: UserX, color: 'text-red-600' },
     { title: 'En Mission', value: missionCount, icon: Plane, color: 'text-blue-600' },
     { title: 'En Permission', value: permissionCount, icon: Coffee, color: 'text-yellow-600' },
@@ -130,7 +129,7 @@ export default function DashboardPage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         {stats.map(stat => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
