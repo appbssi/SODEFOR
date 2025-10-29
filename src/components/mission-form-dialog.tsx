@@ -12,7 +12,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 import { useApp } from '@/context/app-provider';
 import { useToast } from '@/hooks/use-toast';
 import type { Mission } from '@/types';
@@ -29,7 +28,7 @@ interface MissionFormDialogProps {
 const missionNames = [
   'CARTOGRAPHIE',
   'DELIMITATION',
-  'INFRASTRUCTURES LIEES AUX REBOISE',
+  'INFRASTRUCTURES LIEES AUX REBOIS',
   'AMENAGEMENTS FORÊT NATURELLES',
   'REBOISEMENT',
   "TRAVAUX D'ENTRETIEN ET DE SYLVICULTURE",
@@ -41,6 +40,105 @@ const missionNames = [
   'ADMINISTRATION',
 ];
 
+const missionDetails: Record<string, string[]> = {
+  'CARTOGRAPHIE': [
+    'Images satellitaires',
+    'Cartes de base',
+    "Cartes thématiques pour les plans d'amgt",
+    'Carte thématique de gestion courante'
+  ],
+  'DELIMITATION': [
+    'Cartographie des délimitations',
+    'Plantation de limites',
+    'Entretien de limites Plantées',
+    'Autres'
+  ],
+  'INFRASTRUCTURES LIEES AUX REBOIS': [
+    'Création de pistes parcellaires',
+    'Réhabilitation inter-parcellaire',
+    'Reprofilage / Entretien inter-parcellaire',
+    'Matérialisation de pare-feu',
+    'Construction de ponts',
+    'Entretien Pare-feu',
+    'Entretien manuel de pistes',
+    'Entretien manuel des accotements',
+    'Autres'
+  ],
+  'AMENAGEMENTS FORÊT NATURELLES': [
+    "Inventaire d'exploitation",
+    'Sylviculture'
+  ],
+  'REBOISEMENT': [
+    'Production de plants',
+    'Plants en sachets',
+    'Plants en stumps',
+    'Plantations',
+    'Plantation industrielle manuelle',
+    'Plantation reconversion',
+    'Complantassions',
+    'Opérateur du bois'
+  ],
+  "TRAVAUX D'ENTRETIEN ET DE SYLVICULTURE": [
+    'Entretiens',
+    'Entretien plantation ( de 0 à 3 ans )',
+    'Entretien plantation ( > à 3 ans )',
+    'Régénération',
+    'Opérateur du bois',
+    'Sylviculture des reboisements',
+    'Inventaire',
+    'Griffage',
+    'Eclaircie'
+  ],
+  'ACTIVITES SOCIO-ECONOMIQUES': [
+    'Levée de parcelle agricole',
+    'Contractualisation',
+    'Réunion de sensibilisation'
+  ],
+  "PLANS D'AMENAGEMENT": [
+    'Rédaction',
+    'Adoption',
+    'Révision'
+  ],
+  'PRODUCTION/COMMERCIALISATION': [
+    "Bois d'œuvre forêt et de plantation",
+    'Bois de service et autres',
+    'Autres activités commerciales'
+  ],
+  'SURVEILLANCES': [
+    'PATROUILLES',
+    'Etat des lieux',
+    'Levé et report',
+    'Patrouilles ordinaires',
+    'Surveillance contre les défrichements',
+    'Surveillance contre les feux',
+    "Surveillance contre l'exploitation frauduleuse",
+    'Autres surveillances',
+    'Patrouilles grandes envergures',
+    'Patrouilles moyennes envergures',
+    'Patrouilles petites envergures',
+    'Installation de comité de lutte',
+    'Audiences dans les tribunaux (Règlement de litige)'
+  ],
+  'DISPOSITIFS EXPERIMENTAUX': [
+    'Mise en place de parcelles conservatoires',
+    "Mise en place d'arboretum",
+    'Essais clonaux',
+    'Entretien de layon de base',
+    'Entretien de layon principaux',
+    'Entretien de layon secondaires'
+  ],
+  'ADMINISTRATION': [
+    'Administration',
+    'Formation reçue',
+    'Atelier, séminaire',
+    'Prises de gardes',
+    'Absences justifiées',
+    'Absences non justifiées',
+    'Congés annuels',
+    'Autres absences (Repos maladie)'
+  ]
+};
+
 export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDialogProps) {
   const { personnel, addMission } = useApp();
   const { toast } = useToast();
@@ -49,6 +147,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   const [description, setDescription] = useState('');
   const [date, setDate] = useState('');
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
+  const [availableDescriptions, setAvailableDescriptions] = useState<string[]>([]);
   
   useEffect(() => {
     if (mission) {
@@ -56,20 +155,30 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       setDescription(mission.description);
       setDate(mission.date);
       setSelectedPersonnel(mission.personnelIds);
+      if(mission.name && missionDetails[mission.name]) {
+        setAvailableDescriptions(missionDetails[mission.name]);
+      }
     } else {
       // Reset form for new mission
       setName('');
       setDescription('');
       setDate('');
       setSelectedPersonnel([]);
+      setAvailableDescriptions([]);
     }
   }, [mission, open]);
 
+  const handleNameChange = (newName: string) => {
+    setName(newName);
+    setDescription(''); // Reset description when name changes
+    setAvailableDescriptions(missionDetails[newName] || []);
+  };
+
   const handleSubmit = async () => {
-    if (!name || !date || selectedPersonnel.length === 0) {
+    if (!name || !description || !date || selectedPersonnel.length === 0) {
       toast({
         title: 'Champs requis manquants',
-        description: 'Veuillez remplir le nom, la date et sélectionner au moins un agent.',
+        description: 'Veuillez remplir le nom, la description, la date et sélectionner au moins un agent.',
         variant: 'destructive',
       });
       return;
@@ -118,7 +227,7 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
         <div className="grid gap-6 py-4">
             <div className="grid gap-2">
                 <Label htmlFor="name">Nom de la mission</Label>
-                <Select value={name} onValueChange={setName}>
+                <Select value={name} onValueChange={handleNameChange}>
                   <SelectTrigger id="name">
                     <SelectValue placeholder="Sélectionnez un nom de mission..." />
                   </SelectTrigger>
@@ -135,7 +244,20 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
-                <Textarea id="description" value={description} onChange={e => setDescription(e.target.value)} placeholder="Décrivez l'objectif de la mission..." />
+                 <Select value={description} onValueChange={setDescription} disabled={!name}>
+                  <SelectTrigger id="description">
+                    <SelectValue placeholder="Sélectionnez une description..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-72">
+                      {availableDescriptions.map(desc => (
+                        <SelectItem key={desc} value={desc}>
+                          {desc}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
