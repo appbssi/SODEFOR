@@ -208,7 +208,28 @@ export default function AttendancePage() {
   }
 
   const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
-    return attendance.find(a => a.personnelId === personnelId && a.date === today);
+    // Find the record for today for this specific person
+    let record = attendance.find(a => a.personnelId === personnelId && a.date === today);
+
+    // If no record for today, check for multi-day permission
+    if (!record) {
+        const todayDate = startOfDay(new Date());
+        const permissionRecord = attendance.find(a => 
+            a.personnelId === personnelId &&
+            a.status === 'permission' &&
+            a.permissionDuration?.start &&
+            a.permissionDuration?.end &&
+            isWithinInterval(todayDate, { 
+                start: startOfDay(parseISO(a.permissionDuration.start)), 
+                end: startOfDay(parseISO(a.permissionDuration.end)) 
+            })
+        );
+        if (permissionRecord) {
+            return permissionRecord;
+        }
+    }
+    
+    return record;
   };
   
   const getMissionForPersonnel = (personnelId: string) => {
@@ -339,11 +360,19 @@ export default function AttendancePage() {
                   const currentStatusRecord = getStatusForPersonnel(person.id);
                   const mission = getMissionForPersonnel(person.id);
 
-                  // If the mission is completed, the status from the attendance record might still be 'mission'.
-                  // We should treat it as 'present' for UI purposes if the mission is done.
-                  let displayStatus: AttendanceStatus = currentStatusRecord?.status || 'present';
-                  if (currentStatusRecord?.status === 'mission' && !mission) {
-                    displayStatus = 'present'; // Or another default status
+                  let displayStatus: AttendanceStatus;
+
+                  if (currentStatusRecord) {
+                    // A record exists for today
+                    if (currentStatusRecord.status === 'mission' && !mission) {
+                      // Mission is completed, so person is present
+                      displayStatus = 'present';
+                    } else {
+                      displayStatus = currentStatusRecord.status;
+                    }
+                  } else {
+                     // No record for today, not in mission, not on permission -> present by default
+                     displayStatus = 'present';
                   }
 
                   return (
@@ -351,34 +380,30 @@ export default function AttendancePage() {
                       <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
                       <TableCell>{person.rank}</TableCell>
                       <TableCell>
-                        {currentStatusRecord ? (
-                          <div className="flex items-center gap-2">
-                              <Badge variant={statusVariant[displayStatus]}>
-                                {allStatusOptions.find(s => s.value === displayStatus)?.label}
-                              </Badge>
-                              {mission && (
-                                  <TooltipProvider>
-                                      <Tooltip>
-                                          <TooltipTrigger>
-                                              <Rocket className="h-4 w-4 text-muted-foreground" />
-                                          </TooltipTrigger>
-                                          <TooltipContent>
-                                              <p className="font-semibold">{mission.name}</p>
-                                              <p className="text-xs">{mission.description}</p>
-                                          </TooltipContent>
-                                      </Tooltip>
-                                  </TooltipProvider>
-                              )}
-                          </div>
-                        ) : (
-                          <Badge variant="outline">Non défini</Badge>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <Badge variant={statusVariant[displayStatus]}>
+                              {allStatusOptions.find(s => s.value === displayStatus)?.label}
+                            </Badge>
+                            {displayStatus === 'mission' && mission && (
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger>
+                                            <Rocket className="h-4 w-4 text-muted-foreground" />
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="font-semibold">{mission.name}</p>
+                                            <p className="text-xs">{mission.description}</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                            )}
+                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <Select
                           value={displayStatus}
                           onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
-                          disabled={isValidated || mission !== null}
+                          disabled={isValidated || (displayStatus === 'mission' && mission !== null)}
                         >
                           <SelectTrigger className="w-full md:w-[180px] float-right">
                             <SelectValue placeholder="Changer statut..." />
@@ -444,5 +469,3 @@ export default function AttendancePage() {
     </>
   );
 }
-
-    

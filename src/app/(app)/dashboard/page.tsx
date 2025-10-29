@@ -117,10 +117,11 @@ export default function DashboardPage() {
   ].filter(d => d.value > 0), [presentCount, absentCount, missionCount]);
 
   const chartConfig = useMemo(() => {
-    return chartData.reduce((acc, item) => {
-      acc[item.name] = { label: item.name, color: item.fill };
-      return acc;
-    }, {} as any);
+    const config: any = {};
+     chartData.forEach(item => {
+      config[item.name] = { label: item.name, color: item.fill };
+    });
+    return config
   }, [chartData]);
 
   return (
