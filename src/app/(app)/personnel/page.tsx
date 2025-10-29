@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { PlusCircle, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -18,15 +18,55 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+  } from '@/components/ui/dropdown-menu';
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useApp } from '@/context/app-provider';
 import type { Personnel } from '@/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useState } from 'react';
 import { PersonnelImportDialog } from '@/components/personnel-import-dialog';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export default function PersonnelPage() {
-  const { personnel, loading } = useApp();
+  const { personnel, loading, deletePersonnel } = useApp();
   const [isImporting, setIsImporting] = useState(false);
+  const [personnelToDelete, setPersonnelToDelete] = useState<Personnel | null>(null);
+  const { toast } = useToast();
+  const router = useRouter();
+
+
+  const handleDeleteConfirm = () => {
+    if (personnelToDelete) {
+        deletePersonnel(personnelToDelete.id);
+        toast({
+            title: 'Personnel Supprimé',
+            description: `Le membre du personnel "${personnelToDelete.lastName} ${personnelToDelete.firstName}" a été supprimé.`,
+            variant: 'destructive',
+        });
+        setPersonnelToDelete(null);
+    }
+  };
+
+  const handleEdit = (id: string) => {
+    router.push(`/personnel/${id}/edit`);
+  }
 
   return (
     <>
@@ -66,6 +106,9 @@ export default function PersonnelPage() {
                 <TableHead>Grade</TableHead>
                 <TableHead className="hidden md:table-cell">Contact</TableHead>
                 <TableHead className="hidden md:table-cell">Email</TableHead>
+                <TableHead>
+                    <span className="sr-only">Actions</span>
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -77,6 +120,7 @@ export default function PersonnelPage() {
                     <TableCell><Skeleton className="h-4 w-24" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell className="hidden md:table-cell"><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-8 w-8" /></TableCell>
                   </TableRow>
                 ))
               ) : personnel.map((person: Personnel) => (
@@ -86,6 +130,25 @@ export default function PersonnelPage() {
                   <TableCell>{person.rank}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.email}</TableCell>
+                  <TableCell>
+                  <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          aria-haspopup="true"
+                          size="icon"
+                          variant="ghost"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onClick={() => handleEdit(person.id)}>Modifier</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setPersonnelToDelete(person)}>Supprimer</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -93,6 +156,21 @@ export default function PersonnelPage() {
         </CardContent>
       </Card>
       <PersonnelImportDialog open={isImporting} onOpenChange={setIsImporting} />
+
+      <AlertDialog open={!!personnelToDelete} onOpenChange={(open) => !open && setPersonnelToDelete(null)}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Êtes-vous sûr de vouloir supprimer cet agent ?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Cette action est irréversible. Le membre du personnel "{personnelToDelete?.lastName} {personnelToDelete?.firstName}" sera supprimé définitivement.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setPersonnelToDelete(null)}>Annuler</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive hover:bg-destructive/90">Supprimer</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+       </AlertDialog>
     </>
   );
 }

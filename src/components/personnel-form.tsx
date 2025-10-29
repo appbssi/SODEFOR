@@ -16,6 +16,8 @@ import {
 import { Input } from '@/components/ui/input';
 import { useApp } from '@/context/app-provider';
 import { useToast } from '@/hooks/use-toast';
+import type { Personnel } from '@/types';
+import { useEffect } from 'react';
 
 const formSchema = z.object({
   matricule: z.string().min(2, { message: 'Le matricule est requis.' }),
@@ -27,14 +29,18 @@ const formSchema = z.object({
   email: z.string().email({ message: "L'adresse e-mail n'est pas valide." }),
 });
 
-export function PersonnelForm() {
+interface PersonnelFormProps {
+    personnel?: Personnel;
+}
+
+export function PersonnelForm({ personnel }: PersonnelFormProps) {
   const router = useRouter();
-  const { addPersonnel } = useApp();
+  const { addPersonnel, updatePersonnel } = useApp();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    defaultValues: personnel || {
       matricule: '',
       lastName: '',
       firstName: '',
@@ -44,14 +50,27 @@ export function PersonnelForm() {
       email: '',
     },
   });
+  
+  useEffect(() => {
+    if (personnel) {
+        form.reset(personnel);
+    }
+  }, [personnel, form]);
 
   function onSubmit(values: z.infer<typeof formSchema>) {
-    addPersonnel(values);
-    toast({
-      title: 'Succès!',
-      description: 'Le membre du personnel a été ajouté.',
-      variant: 'default',
-    });
+    if (personnel) {
+        updatePersonnel(personnel.id, values);
+        toast({
+          title: 'Succès!',
+          description: 'Le membre du personnel a été mis à jour.',
+        });
+    } else {
+        addPersonnel(values);
+        toast({
+          title: 'Succès!',
+          description: 'Le membre du personnel a été ajouté.',
+        });
+    }
     router.push('/personnel');
   }
 
