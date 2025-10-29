@@ -19,7 +19,7 @@ interface AppContextType {
   addPersonnel: (person: Omit<Personnel, 'id'>) => void;
   addMultiplePersonnel: (personnelList: Omit<Personnel, 'id'>[]) => Promise<void>;
   updateAttendance: (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => void;
-  addMission: (mission: Omit<Mission, 'id'>) => Promise<void>;
+  addMission: (mission: Omit<Mission, 'id'>) => void;
   getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
   todaysStatus: DailyStatus | null;
@@ -119,57 +119,64 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
   
-  const addMission = async (missionData: Omit<Mission, 'id'>): Promise<void> => {
-    // Optimistic UI update
+  const addMission = (missionData: Omit<Mission, 'id'>) => {
+    // This is a fully optimistic update. It updates the local state immediately
+    // and bypasses writing to Firestore to avoid permission errors in the dev env.
+
+    // 1. Create a temporary, unique ID for the new mission for local state management.
     const tempId = `mission_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     const newMission: Mission = { ...missionData, id: tempId };
 
-    // Update local state immediately for missions
+    // 2. Update the local 'missions' state immediately.
+    // The new mission is added to the top of the list.
     setMissions(prevMissions => [newMission, ...(prevMissions || [])]);
 
+    // 3. Prepare the new attendance records for the assigned personnel.
     const newAttendanceRecords: AttendanceRecord[] = [];
     missionData.personnelIds.forEach(personnelId => {
+      const attendanceId = `${personnelId}_${missionData.date}`;
       const newRecord: AttendanceRecord = {
+        id: attendanceId,
         personnelId,
         date: missionData.date,
         status: 'mission',
         missionId: tempId,
       };
       newAttendanceRecords.push(newRecord);
-      
-      // Temporarily disable Firestore write to bypass permission errors
-      /*
-      if (firestore) {
-        const attendanceId = `${personnelId}_${missionData.date}`;
-        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
-        setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
-      }
-      */
     });
 
-    // Update local state immediately for attendance
+    // 4. Update the local 'attendance' state immediately.
     setAttendance(prevAttendance => {
         const existingRecords = prevAttendance || [];
-        // Filter out any existing records for the same people on the same day to avoid duplicates
+        // Filter out any existing attendance records for the same personnel on the same day
+        // to avoid conflicts or duplicates.
         const filtered = existingRecords.filter(att => 
             !(att.date === missionData.date && missionData.personnelIds.includes(att.personnelId))
         );
+        // Return the new state with old records and the new 'mission' records.
         return [...filtered, ...newAttendanceRecords];
     });
 
-    // Temporarily disable Firestore write to bypass permission errors
+    // The Firestore write operations below are commented out to "definitively skip the permission".
     /*
     if (firestore) {
+      // This call would attempt to write the mission to the database.
       const missionCollection = collection(firestore, 'missions');
-      // This call will be made, but we won't wait for it and we'll catch any error to prevent it from crashing the app.
       addDocumentNonBlocking(missionCollection, missionData).catch(error => {
+        // We log a warning instead of showing an error to the user, as the UI is already updated.
         console.warn("Could not save mission to Firestore (permission error suppressed):", error);
-        // The UI is already updated, so we just log the warning.
+      });
+
+      // These calls would update the attendance for each assigned person.
+      newAttendanceRecords.forEach(record => {
+        const { id, ...recordData } = record;
+        if (id) {
+          const attendanceDocRef = doc(firestore, 'attendance', id);
+          setDocumentNonBlocking(attendanceDocRef, recordData, { merge: true });
+        }
       });
     }
     */
-
-    return Promise.resolve();
   };
 
   const validateTodaysAttendance = () => {

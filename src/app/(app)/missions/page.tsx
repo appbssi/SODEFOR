@@ -5,11 +5,12 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Clock } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -56,8 +57,8 @@ export default function MissionsPage() {
             <h2 className="text-xl font-semibold mb-4">Missions à venir et en cours</h2>
             {loading ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Skeleton className="h-48" />
-                    <Skeleton className="h-48" />
+                    <Skeleton className="h-56" />
+                    <Skeleton className="h-56" />
                 </div>
             ) : upcomingMissions.length > 0 ? (
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -79,6 +80,12 @@ export default function MissionsPage() {
                                     })}
                                 </div>
                             </CardContent>
+                            <CardFooter className="pt-4">
+                                <div className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+                                    <Clock className="h-4 w-4" />
+                                    <span>{mission.totalHours || 0} Heures totales</span>
+                                </div>
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>
@@ -91,19 +98,19 @@ export default function MissionsPage() {
             <h2 className="text-xl font-semibold mb-4">Missions terminées</h2>
             {loading ? (
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Skeleton className="h-48" />
+                    <Skeleton className="h-56" />
                 </div>
             ) : pastMissions.length > 0 ? (
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {pastMissions.map(mission => (
-                        <Card key={mission.id} className="opacity-70">
+                        <Card key={mission.id} className="opacity-70 flex flex-col">
                             <CardHeader>
                                 <CardTitle>{mission.name}</CardTitle>
                                 <CardDescription>
                                     Terminée le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
                                 </CardDescription>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="flex-grow">
                                <h4 className="font-semibold mb-2 text-sm">Personnel assigné:</h4>
                                 <div className="flex flex-wrap gap-2">
                                     {mission.personnelIds.map(id => {
@@ -112,6 +119,12 @@ export default function MissionsPage() {
                                     })}
                                 </div>
                             </CardContent>
+                            <CardFooter className="pt-4">
+                                <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                                    <Clock className="h-3 w-3" />
+                                    <span>{mission.totalHours || 0} Heures totales</span>
+                                </div>
+                            </CardFooter>
                         </Card>
                     ))}
                 </div>

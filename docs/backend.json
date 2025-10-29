@@ -129,9 +129,13 @@
             "type": "string"
           },
           "description": "List of personnel IDs assigned to the mission."
+        },
+        "totalHours": {
+          "type": "number",
+          "description": "Total hours for the mission, calculated as 8 hours per assigned personnel."
         }
       },
-      "required": ["name", "date", "personnelIds"]
+      "required": ["name", "date", "personnelIds", "totalHours"]
     }
   },
   "auth": {

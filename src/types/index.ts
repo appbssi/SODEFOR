@@ -35,4 +35,5 @@ export interface Mission {
     description: string;
     date: string; // YYYY-MM-DD
     personnelIds: string[];
+    totalHours: number;
 }

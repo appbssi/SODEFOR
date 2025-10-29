@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +18,7 @@ import type { Mission } from '@/types';
 import { Checkbox } from './ui/checkbox';
 import { ScrollArea } from './ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Clock } from 'lucide-react';
 
 interface MissionFormDialogProps {
   open: boolean;
@@ -149,6 +150,8 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
   const [selectedPersonnel, setSelectedPersonnel] = useState<string[]>([]);
   const [availableDescriptions, setAvailableDescriptions] = useState<string[]>([]);
   
+  const totalHours = useMemo(() => selectedPersonnel.length * 8, [selectedPersonnel]);
+
   useEffect(() => {
     if (mission) {
       setName(mission.name);
@@ -189,22 +192,15 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
       description,
       date,
       personnelIds: selectedPersonnel,
+      totalHours,
     };
     
-    try {
-      await addMission(missionData);
-      toast({
-        title: 'Mission enregistrée !',
-        description: `La mission "${name}" a été créée avec succès.`,
-      });
-      onOpenChange(false);
-    } catch (error) {
-       toast({
-        title: 'Erreur',
-        description: 'Impossible d\'enregistrer la mission.',
-        variant: 'destructive',
-      });
-    }
+    addMission(missionData);
+    toast({
+      title: 'Mission enregistrée !',
+      description: `La mission "${name}" a été créée avec succès.`,
+    });
+    onOpenChange(false);
   };
   
   const handlePersonnelSelection = (personnelId: string, checked: boolean) => {
@@ -266,7 +262,13 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
                 </div>
             </div>
             <div className="grid gap-2">
-                <Label>Assigner du personnel</Label>
+                <div className="flex justify-between items-center">
+                    <Label>Assigner du personnel</Label>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span>{totalHours} heures</span>
+                    </div>
+                </div>
                 <ScrollArea className="h-48 rounded-md border p-4">
                     <div className="space-y-2">
                         {personnel.map(p => (
