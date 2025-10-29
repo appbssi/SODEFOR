@@ -18,7 +18,7 @@ import {
 } from '@/components/ui/chart';
 import { PieChart, Pie, Cell } from 'recharts';
 import { useMemo } from 'react';
-import { isWithinInterval, parseISO } from 'date-fns';
+import { isWithinInterval, parseISO, startOfDay } from 'date-fns';
 
 const ICONS: { [key: string]: React.ElementType } = {
   present: UserCheck,
@@ -42,14 +42,13 @@ const COLORS: { [key: string]: string } = {
 };
 
 export default function DashboardPage() {
-  const { personnel, getAttendanceForDate, getPersonnelById, missions } = useApp();
+  const { personnel, attendance, getPersonnelById, missions } = useApp();
   const today = new Date().toISOString().split('T')[0];
-  const todaysAttendance = getAttendanceForDate(today);
+  const todaysAttendance = attendance.filter(a => a.date === today);
 
   const totalPersonnel = personnel.length;
 
   const missionCount = useMemo(() => {
-    // Count unique personnel across all active missions
     const personnelInActiveMissions = new Set<string>();
     missions
       .filter(m => m.status === 'active')
@@ -62,25 +61,26 @@ export default function DashboardPage() {
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   
   const permissionCount = useMemo(() => {
-    const todayDate = new Date();
-    // We only need to check records with status 'permission' that might be relevant.
-    // This is an approximation; a more robust solution would query all permission records.
-    // For now, we assume getAttendanceForDate gives us enough context.
-    const allPermissionRecords = getAttendanceForDate(today).filter(a => a.status === 'permission');
+    const todayDate = startOfDay(new Date());
+    // Get all records with 'permission' status, regardless of the date, to check intervals.
+    const allPermissionRecords = attendance.filter(a => a.status === 'permission');
     
     return allPermissionRecords.filter(record => {
-      if (record.permissionDuration) {
+      if (record.permissionDuration && record.permissionDuration.start && record.permissionDuration.end) {
         try {
-          const start = parseISO(record.permissionDuration.start);
-          const end = parseISO(record.permissionDuration.end);
+          // Use startOfDay to compare dates without time component
+          const start = startOfDay(parseISO(record.permissionDuration.start));
+          const end = startOfDay(parseISO(record.permissionDuration.end));
           return isWithinInterval(todayDate, { start, end });
         } catch (e) {
-          return false; // Invalid date format
+          console.error("Invalid permission date format:", record);
+          return false; 
         }
       }
+      // Fallback for older records without duration
       return record.date === today;
     }).length;
-  }, [getAttendanceForDate, today]);
+  }, [attendance, today]);
 
   const presentCount = Math.max(0, totalPersonnel - absentCount - permissionCount - missionCount);
 
