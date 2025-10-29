@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MoreVertical, Car } from 'lucide-react';
+import { PlusCircle, Clock, MoreVertical, Car, RefreshCw } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -59,6 +59,14 @@ export default function MissionsPage() {
     toast({
         title: 'Mission Terminée',
         description: `La mission "${mission.name}" a été marquée comme terminée.`,
+    });
+  };
+
+  const handleReactivateMission = (mission: Mission) => {
+    updateMission(mission.id, { status: 'active' });
+    toast({
+        title: 'Mission Réactivée',
+        description: `La mission "${mission.name}" est de nouveau active.`,
     });
   };
 
@@ -181,11 +189,29 @@ export default function MissionsPage() {
                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     {pastMissions.map(mission => (
                         <Card key={mission.id} className="opacity-70 flex flex-col">
-                            <CardHeader>
-                                <CardTitle>{mission.name}</CardTitle>
-                                <CardDescription>
-                                    Terminée le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
-                                </CardDescription>
+                           <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle>{mission.name}</CardTitle>
+                                        <CardDescription>
+                                            Terminée le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
+                                        </CardDescription>
+                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                                <MoreVertical className="h-4 w-4" />
+                                                <span className="sr-only">Ouvrir le menu</span>
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleReactivateMission(mission)}>
+                                                <RefreshCw className="mr-2 h-4 w-4" />
+                                                Réactiver la mission
+                                            </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                </div>
                             </CardHeader>
                             <CardContent className="flex-grow">
                                {mission.personnelIds && mission.personnelIds.length > 0 && (
