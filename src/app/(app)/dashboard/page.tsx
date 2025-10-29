@@ -138,50 +138,6 @@ export default function DashboardPage() {
             </Card>
         ))}
       </div>
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
-        <Card className="col-span-full">
-          <CardHeader>
-            <CardTitle>Activité Récente</CardTitle>
-            <CardDescription>Mises à jour du statut d'aujourd'hui.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {todaysAttendance.length > 0 ? todaysAttendance.slice(0,5).map(record => {
-                 const person = getPersonnelById(record.personnelId);
-                 if (!person) return null;
-
-                 let displayStatus = record.status;
-                 if (record.status === 'mission') {
-                   const mission = missions.find(m => m.id === record.missionId);
-                   if (mission?.status === 'completed') {
-                     displayStatus = 'present';
-                   }
-                 }
-
-                 const Icon = ICONS[displayStatus];
-                 if (!Icon) return null;
-
-                 const translatedStatus = STATUS_TRANSLATION[displayStatus];
-                 if (!translatedStatus) return null;
-
-                 const color = chartConfig[translatedStatus]?.color || '#ccc';
-
-                 return (
-                   <div key={record.personnelId + record.date} className="flex items-center gap-4">
-                     <div className="p-2 rounded-full" style={{backgroundColor: `${color}20`}}>
-                        <Icon className="h-5 w-5" style={{color: color}} />
-                     </div>
-                     <div className="flex-grow">
-                       <p className="font-medium">{person.lastName} {person.firstName}</p>
-                       <p className="text-sm text-muted-foreground">{translatedStatus}</p>
-                     </div>
-                   </div>
-                 )
-              }) : <p className="text-sm text-muted-foreground">Aucune activité aujourd'hui.</p>}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
