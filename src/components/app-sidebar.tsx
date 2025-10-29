@@ -52,7 +52,7 @@ export function AppSidebar() {
               >
                 <Link href={item.href}>
                   <item.icon className="size-4" />
-                  <span>{item.label}</span>
+                  <span>{item.href === '/missions' ? 'Temps du Personnel Permanent en Heure de Travail' : item.label}</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
