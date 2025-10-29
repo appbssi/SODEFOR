@@ -15,6 +15,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableFooter,
   TableHead,
   TableHeader,
   TableRow,
@@ -31,23 +32,17 @@ import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
-import { Download } from 'lucide-react';
+import { Download, Clock } from 'lucide-react';
 
-const statusIcons: { [key in AttendanceStatus]: string } = {
-  present: '✔️',
-  absent: '❌',
-  mission: '✈️',
-  permission: '🗓️',
+const HOURS_PER_STATUS: { [key in AttendanceStatus | 'N/A']: number } = {
+  present: 8,
+  mission: 8,
+  absent: 0,
+  permission: 0,
+  'N/A': 0,
 };
 
-const statusTooltips: { [key in AttendanceStatus]: string } = {
-  present: 'Présent',
-  absent: 'Absent',
-  mission: 'En Mission',
-  permission: 'En Permission',
-};
-
-export default function ReportsPage() {
+export default function HoursReportPage() {
   const { personnel, attendance } = useApp();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
@@ -55,7 +50,6 @@ export default function ReportsPage() {
   const [daysOfMonth, setDaysOfMonth] = useState<Date[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const reportTableRef = useRef<HTMLDivElement>(null);
-
 
   const handleGenerateReport = () => {
     const year = parseInt(selectedMonth.split('-')[0]);
@@ -69,14 +63,18 @@ export default function ReportsPage() {
     setDaysOfMonth(days);
 
     const data = personnel.map(person => {
+      let totalHours = 0;
       const personAttendance = days.map(day => {
         const dayString = format(day, 'yyyy-MM-dd');
         const record = attendance.find(
           a => a.personnelId === person.id && a.date === dayString
         );
-        return record ? record.status : 'N/A';
+        const status = record ? record.status : 'N/A';
+        const hours = HOURS_PER_STATUS[status];
+        totalHours += hours;
+        return hours;
       });
-      return { ...person, attendance: personAttendance };
+      return { ...person, attendance: personAttendance, totalHours };
     });
     setReportData(data);
   };
@@ -107,22 +105,22 @@ export default function ReportsPage() {
         const pdfHeight = pdf.internal.pageSize.getHeight();
         
         const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Rapport';
-
-        pdf.setFontSize(16);
-        pdf.text(`Rapport de Présence - ${monthLabel}`, pdfWidth / 2, 15, { align: 'center' });
         
+        pdf.setFontSize(16);
+        pdf.text(`Bilan des Heures - ${monthLabel}`, pdfWidth / 2, 15, { align: 'center' });
+
         const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth - 20; // margins
+        const imgWidth = pdfWidth - 20;
         const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
         let position = 25;
-
+        
         pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         
-        pdf.save(`rapport_presence_${monthLabel.replace(' ', '_')}.pdf`);
+        pdf.save(`bilan_heures_${monthLabel.replace(' ', '_')}.pdf`);
         
         toast({
             title: 'Exportation réussie',
-            description: 'Le rapport a été téléchargé en PDF.',
+            description: 'Le bilan des heures a été téléchargé en PDF.',
         });
 
     } catch (error) {
@@ -140,7 +138,7 @@ export default function ReportsPage() {
   const monthOptions = useMemo(() => {
     const options = [];
     const today = new Date();
-    for (let i = 0; i < 24; i++) { // Increased to 24 months
+    for (let i = 0; i < 24; i++) { 
         const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
         options.push({
             value: format(date, 'yyyy-MM'),
@@ -153,9 +151,9 @@ export default function ReportsPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Rapport de Présence Détaillé</CardTitle>
+        <CardTitle>Bilan Mensuel des Heures</CardTitle>
         <CardDescription>
-          Sélectionnez un mois pour générer un rapport de présence détaillé.
+          Générez un rapport détaillé des heures travaillées par agent pour un mois donné.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -172,7 +170,7 @@ export default function ReportsPage() {
               ))}
             </SelectContent>
           </Select>
-          <Button onClick={handleGenerateReport} className="w-full sm:w-auto">Générer le rapport</Button>
+          <Button onClick={handleGenerateReport} className="w-full sm:w-auto">Générer le Bilan</Button>
           <Button onClick={handleExportPDF} variant="outline" className="w-full sm:w-auto gap-2" disabled={isExporting || reportData.length === 0}>
             <Download className="h-4 w-4" />
             {isExporting ? 'Exportation...' : 'Exporter en PDF'}
@@ -182,28 +180,28 @@ export default function ReportsPage() {
         {reportData.length > 0 ? (
           <div ref={reportTableRef} id="report-table" className="overflow-x-auto relative border rounded-lg bg-card p-4">
              <h3 className="text-lg font-semibold text-center mb-4">
-                Rapport de Présence - {monthOptions.find(m => m.value === selectedMonth)?.label}
+                Bilan des Heures - {monthOptions.find(m => m.value === selectedMonth)?.label}
             </h3>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="sticky left-0 bg-card z-10 w-[200px]">Nom</TableHead>
+                  <TableHead className="sticky left-0 bg-card z-10 w-[200px] font-bold">Agent</TableHead>
                   {daysOfMonth.map(day => (
                     <TableHead key={day.toString()} className="text-center min-w-[50px]">{format(day, 'd')}</TableHead>
                   ))}
+                   <TableHead className="text-right font-bold min-w-[100px] sticky right-0 bg-card z-10">Total Heures</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {reportData.map(person => (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
-                    {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
+                    {person.attendance.map((hours: number, index: number) => (
                       <TableCell key={index} className="text-center">
-                        {status !== 'N/A' ? (
-                          <span title={statusTooltips[status as AttendanceStatus]}>{statusIcons[status as AttendanceStatus]}</span>
-                        ) : <span className="text-muted-foreground">-</span>}
+                        {hours > 0 ? hours : <span className="text-muted-foreground">-</span>}
                       </TableCell>
                     ))}
+                    <TableCell className="text-right font-bold sticky right-0 bg-card z-10">{person.totalHours}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -211,7 +209,7 @@ export default function ReportsPage() {
           </div>
         ) : (
             <div className="text-center py-10 text-muted-foreground">
-                <p>Aucun rapport généré. Veuillez sélectionner un mois et cliquer sur "Générer le rapport".</p>
+                <p>Aucun bilan généré. Veuillez sélectionner un mois et cliquer sur "Générer le bilan".</p>
             </div>
         )}
       </CardContent>

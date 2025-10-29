@@ -10,6 +10,7 @@ import {
   FileText,
   Rocket,
   Car,
+  Clock,
 } from 'lucide-react';
 import {
   SidebarHeader,
@@ -26,7 +27,8 @@ const menuItems = [
   { href: '/attendance', label: 'Pointage', icon: CalendarCheck2 },
   { href: '/missions', label: 'T.P.P.H.T', icon: Rocket, tooltip: 'Temps du Personnel Permanent en Heure de Travail' },
   { href: '/vehicle-tracking', label: 'Suivi Véhicules', icon: Car },
-  { href: '/reports', label: 'Rapports', icon: FileText },
+  { href: '/reports', label: 'Rapport de Présence', icon: FileText },
+  { href: '/hours-report', label: 'Bilan des Heures', icon: Clock },
 ];
 
 export function AppSidebar() {

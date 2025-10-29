@@ -30,7 +30,8 @@ const breadcrumbNameMap: { [key: string]: string } = {
   '/attendance': 'Pointage',
   '/missions': 'T.P.P.H.T',
   '/vehicle-tracking': 'Suivi Véhicules',
-  '/reports': 'Rapports',
+  '/reports': 'Rapport de Présence',
+  '/hours-report': 'Bilan des Heures',
 };
 
 export function AppHeader() {
