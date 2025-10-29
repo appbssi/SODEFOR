@@ -252,7 +252,20 @@ export function MissionFormDialog({ open, onOpenChange, mission }: MissionFormDi
             </div>
             <div className="grid gap-2">
                 <Label htmlFor="description">Description</Label>
-                 <Textarea id="description" placeholder="Description de la mission..." value={description} onChange={(e) => setDescription(e.target.value)} />
+                <Select value={description} onValueChange={setDescription} disabled={availableDescriptions.length === 0}>
+                    <SelectTrigger id="description">
+                        <SelectValue placeholder="Sélectionnez une description..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <ScrollArea className="h-72">
+                            {availableDescriptions.map(desc => (
+                                <SelectItem key={desc} value={desc}>
+                                    {desc}
+                                </SelectItem>
+                            ))}
+                        </ScrollArea>
+                    </SelectContent>
+                </Select>
             </div>
             <div className="grid grid-cols-2 gap-4">
                 <div className="grid gap-2">
