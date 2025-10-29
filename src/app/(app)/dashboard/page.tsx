@@ -48,21 +48,21 @@ export default function DashboardPage() {
   const totalPersonnel = personnel.length;
 
   const missionCount = useMemo(() => {
-    return personnel.filter(p => {
-        const attendanceRecord = todaysAttendance.find(a => a.personnelId === p.id);
-        if (attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
-            const mission = missions.find(m => m.id === attendanceRecord.missionId);
-            return mission?.status !== 'completed';
-        }
-        return false;
-    }).length;
-  }, [personnel, todaysAttendance, missions]);
+    // Count unique personnel across all active missions for today
+    const personnelInActiveMissions = new Set<string>();
+    missions
+      .filter(m => m.status !== 'completed' && m.date === today)
+      .forEach(m => {
+        m.personnelIds.forEach(id => personnelInActiveMissions.add(id));
+      });
+    return personnelInActiveMissions.size;
+  }, [missions, today]);
   
   const absentCount = todaysAttendance.filter(a => a.status === 'absent').length;
   const permissionCount = todaysAttendance.filter(a => a.status === 'permission').length;
   
-  // A person is present if they are not absent, on mission, or on permission.
   const presentCount = Math.max(0, totalPersonnel - absentCount - permissionCount - missionCount);
+
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
