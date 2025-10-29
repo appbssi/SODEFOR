@@ -125,42 +125,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const addMission = (missionData: Omit<Mission, 'id' | 'status'>) => {
     if (!firestore) return;
     const missionsCollection = collection(firestore, 'missions');
-    
-    // Optimistically update UI
-    const tempId = `mission_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-    const newMission: Mission = { ...missionData, id: tempId, status: 'active' };
-    setMissions(prevMissions => [newMission, ...(prevMissions || [])]);
-
-    if (missionData.personnelIds && missionData.personnelIds.length > 0) {
-      const newAttendanceRecords: AttendanceRecord[] = [];
-      missionData.personnelIds.forEach(personnelId => {
-        const attendanceId = `${personnelId}_${missionData.date}`;
-        const newRecord: AttendanceRecord = {
-          id: attendanceId,
-          personnelId,
-          date: missionData.date,
-          status: 'mission',
-          missionId: tempId, // Use temp ID for local consistency
-        };
-        newAttendanceRecords.push(newRecord);
-      });
-      setAttendance(prevAttendance => {
-        const existingRecords = prevAttendance || [];
-        const filtered = existingRecords.filter(att => 
-            !(att.date === missionData.date && missionData.personnelIds.includes(att.personnelId))
-        );
-        return [...filtered, ...newAttendanceRecords];
-      });
-    }
-
     addDocumentNonBlocking(missionsCollection, { ...missionData, status: 'active' })
       .then(docRef => {
         if (!docRef) return;
         const newMissionId = docRef.id;
-
-        // Update local state with real ID
-        setMissions(prevMissions => prevMissions?.map(m => m.id === tempId ? { ...m, id: newMissionId } : m) || []);
-        
         if (missionData.personnelIds && missionData.personnelIds.length > 0) {
           missionData.personnelIds.forEach(personnelId => {
             const attendanceId = `${personnelId}_${missionData.date}`;
@@ -169,7 +137,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
               personnelId,
               date: missionData.date,
               status: 'mission',
-              missionId: newMissionId, // Use real mission ID
+              missionId: newMissionId,
             };
             setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
           });
@@ -181,6 +149,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (!firestore) return;
     const missionRef = doc(firestore, 'missions', missionId);
     updateDocumentNonBlocking(missionRef, data);
+    
+    const originalMission = missions.find(m => m.id === missionId);
+
+    if (data.personnelIds) {
+        const oldIds = new Set(originalMission?.personnelIds || []);
+        const newIds = new Set(data.personnelIds);
+
+        // Update newly added personnel
+        data.personnelIds.forEach(id => {
+            if (!oldIds.has(id)) {
+                const attendanceRef = doc(firestore, 'attendance', `${id}_${data.date || originalMission?.date}`);
+                setDocumentNonBlocking(attendanceRef, { status: 'mission', missionId }, { merge: true });
+            }
+        });
+
+        // Reset status for removed personnel
+        oldIds.forEach(id => {
+            if (!newIds.has(id) && originalMission) {
+                const attendanceRef = doc(firestore, 'attendance', `${id}_${originalMission.date}`);
+                // Assuming they go back to 'present'. This could be more complex.
+                updateDocumentNonBlocking(attendanceRef, { status: 'present', missionId: '' });
+            }
+        });
+    }
   };
 
   const deleteMission = (missionId: string) => {
