@@ -34,6 +34,17 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
@@ -41,6 +52,8 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Lock } from 'lucide-react';
 
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
@@ -57,13 +70,15 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
 };
 
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById, loading } = useApp();
+  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
   const [selectedPersonnel, setSelectedPersonnel] = useState<Personnel | null>(null);
   const [permissionStartDate, setPermissionStartDate] = useState('');
   const [permissionEndDate, setPermissionEndDate] = useState('');
+  
+  const isValidated = todaysStatus?.validated;
 
   const handleStatusChange = (personnelId: string, newStatus: AttendanceStatus) => {
     if (newStatus === 'permission') {
@@ -112,6 +127,14 @@ export default function AttendancePage() {
     }
   };
 
+  const handleValidation = () => {
+    validateTodaysAttendance();
+    toast({
+      title: 'Pointage Validé!',
+      description: 'Le pointage pour aujourd\'hui a été verrouillé.',
+    });
+  }
+
   const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
     return attendance.find(a => a.personnelId === personnelId && a.date === today);
   };
@@ -128,9 +151,40 @@ export default function AttendancePage() {
                       {format(new Date(), 'd MMMM yyyy', { locale: fr })}.
                   </CardDescription>
               </div>
+              {!isValidated && !loading && (
+                 <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="destructive" className="gap-2">
+                        <Lock className="h-4 w-4" />
+                        Valider le Pointage du Jour
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Êtes-vous absolument sûr?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Cette action est irréversible. Une fois validé, le pointage de ce jour ne pourra plus être modifié.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Annuler</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleValidation}>Valider</AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+              )}
           </div>
         </CardHeader>
         <CardContent>
+          {isValidated && (
+            <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
+                <Lock className="h-4 w-4 !text-yellow-600" />
+                <AlertTitle className="font-bold">Pointage Verrouillé</AlertTitle>
+                <AlertDescription>
+                    Le pointage pour aujourd'hui a été validé et ne peut plus être modifié.
+                </AlertDescription>
+            </Alert>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -169,6 +223,7 @@ export default function AttendancePage() {
                       <Select
                         value={currentStatusRecord?.status || ''}
                         onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
+                        disabled={isValidated}
                       >
                         <SelectTrigger className="w-full md:w-[180px] float-right">
                           <SelectValue placeholder="Changer statut..." />
