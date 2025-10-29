@@ -118,23 +118,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
   };
   
-  const addMission = async (missionData: Omit<Mission, 'id'>) => {
+  const addMission = (missionData: Omit<Mission, 'id'>) => {
     if (!firestore) {
       console.error("Firestore not available");
       return Promise.reject(new Error("Firestore not available"));
     }
-    
-    // 1. Add mission document
+
     const missionCollection = collection(firestore, 'missions');
-    const newMissionRef = await addDocumentNonBlocking(missionCollection, missionData);
+    const newMissionRef = doc(missionCollection); // Create a reference locally to get an ID.
 
-    if (!newMissionRef) {
-      // This can happen if non-blocking operation fails silently before getting a ref.
-      // Or in our mock scenario if we have issues.
-      return Promise.reject(new Error("Could not create mission document."));
-    }
+    // 1. Add mission document (non-blocking)
+    addDocumentNonBlocking(missionCollection, missionData);
 
-    // 2. Update attendance for each person for the day of the mission
+    // 2. Update attendance for each person (non-blocking)
     missionData.personnelIds.forEach(personnelId => {
       const attendanceId = `${personnelId}_${missionData.date}`;
       const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
@@ -142,11 +138,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         personnelId,
         date: missionData.date,
         status: 'mission' as const,
-        missionId: newMissionRef.id,
+        missionId: newMissionRef.id, // Use the locally generated ID.
       };
       setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
     });
 
+    // The operation is now "fire-and-forget", so we resolve immediately.
     return Promise.resolve();
   };
 
