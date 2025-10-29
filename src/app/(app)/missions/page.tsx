@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Clock, MoreVertical, Car, RefreshCw } from 'lucide-react';
+import { PlusCircle, Clock, MoreVertical, Car, RefreshCw, Trash2 } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import type { Mission } from '@/types';
 import { format } from 'date-fns';
@@ -208,6 +208,13 @@ export default function MissionsPage() {
                                             <DropdownMenuItem onClick={() => handleReactivateMission(mission)}>
                                                 <RefreshCw className="mr-2 h-4 w-4" />
                                                 Réactiver la mission
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem 
+                                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                onClick={() => setMissionToDelete(mission)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Supprimer
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
                                     </DropdownMenu>
