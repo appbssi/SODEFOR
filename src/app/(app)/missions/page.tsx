@@ -120,7 +120,7 @@ export default function MissionsPage() {
                         <Card key={mission.id} className="flex flex-col">
                             <CardHeader>
                                 <div className="flex justify-between items-start">
-                                    <div>
+                                    <div className="pr-2">
                                         <CardTitle>{mission.name}</CardTitle>
                                         <CardDescription>
                                             Le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
@@ -128,7 +128,7 @@ export default function MissionsPage() {
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                                                 <MoreVertical className="h-4 w-4" />
                                                 <span className="sr-only">Ouvrir le menu</span>
                                             </Button>
@@ -137,9 +137,11 @@ export default function MissionsPage() {
                                             <DropdownMenuItem onClick={() => handleEditMission(mission)}>
                                                 Modifier
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={() => handleMarkAsDone(mission)}>
-                                                Marquer comme terminée
-                                            </DropdownMenuItem>
+                                            {mission.endTime && (
+                                                <DropdownMenuItem onClick={() => handleMarkAsDone(mission)}>
+                                                    Marquer comme terminée
+                                                </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem 
                                                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
@@ -211,7 +213,7 @@ export default function MissionsPage() {
                         <Card key={mission.id} className="opacity-70 flex flex-col">
                            <CardHeader>
                                 <div className="flex justify-between items-start">
-                                    <div>
+                                    <div className="pr-2">
                                         <CardTitle>{mission.name}</CardTitle>
                                         <CardDescription>
                                             Terminée le {format(new Date(mission.date), 'd MMMM yyyy', { locale: fr })}
@@ -219,7 +221,7 @@ export default function MissionsPage() {
                                     </div>
                                     <DropdownMenu>
                                         <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 flex-shrink-0">
                                                 <MoreVertical className="h-4 w-4" />
                                                 <span className="sr-only">Ouvrir le menu</span>
                                             </Button>
