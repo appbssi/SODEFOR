@@ -95,7 +95,7 @@ export default function HoursReportPage() {
                 if(onPermission) {
                     status = 'permission';
                 } else {
-                    status = 'present'; // Default to present
+                    status = 'absent'; // Default to absent
                 }
             }
         }
