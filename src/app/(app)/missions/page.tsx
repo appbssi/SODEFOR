@@ -138,6 +138,7 @@ export default function MissionsPage() {
                                             <DropdownMenuItem 
                                                 className="text-red-600 focus:text-red-600 focus:bg-red-50"
                                                 onClick={() => setMissionToDelete(mission)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
                                                 Supprimer
                                             </DropdownMenuItem>
                                         </DropdownMenuContent>
