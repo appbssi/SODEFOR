@@ -64,7 +64,6 @@ import {
 const statusOptions: { value: AttendanceStatus; label: string }[] = [
   { value: 'present', label: 'Présent' },
   { value: 'absent', label: 'Absent' },
-  { value: 'mission', label: 'En Mission' },
   { value: 'permission', label: 'En Permission' },
 ];
 
@@ -157,10 +156,21 @@ export default function AttendancePage() {
   const getMissionForPersonnel = (personnelId: string) => {
       const attendanceRecord = getStatusForPersonnel(personnelId);
       if(attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
-          return missions.find(m => m.id === attendanceRecord.missionId)
+          const mission = missions.find(m => m.id === attendanceRecord.missionId);
+          // Only return the mission if it's active
+          if (mission && mission.status !== 'completed') {
+            return mission;
+          }
       }
       return null;
   }
+
+  const allStatusOptions: { value: AttendanceStatus; label: string }[] = [
+    { value: 'present', label: 'Présent' },
+    { value: 'absent', label: 'Absent' },
+    { value: 'mission', label: 'En Mission' },
+    { value: 'permission', label: 'En Permission' },
+  ];
 
   return (
     <>
@@ -248,6 +258,13 @@ export default function AttendancePage() {
                 const currentStatusRecord = getStatusForPersonnel(person.id);
                 const mission = getMissionForPersonnel(person.id);
 
+                // If the mission is completed, the status from the attendance record might still be 'mission'.
+                // We should treat it as 'present' for UI purposes if the mission is done.
+                let displayStatus: AttendanceStatus = currentStatusRecord?.status || 'present';
+                if (currentStatusRecord?.status === 'mission' && !mission) {
+                  displayStatus = 'present'; // Or another default status
+                }
+
                 return (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
@@ -255,8 +272,8 @@ export default function AttendancePage() {
                     <TableCell>
                       {currentStatusRecord ? (
                         <div className="flex items-center gap-2">
-                            <Badge variant={statusVariant[currentStatusRecord.status]}>
-                              {statusOptions.find(s => s.value === currentStatusRecord.status)?.label}
+                            <Badge variant={statusVariant[displayStatus]}>
+                              {allStatusOptions.find(s => s.value === displayStatus)?.label}
                             </Badge>
                             {mission && (
                                 <TooltipProvider>
@@ -278,7 +295,7 @@ export default function AttendancePage() {
                     </TableCell>
                     <TableCell className="text-right">
                       <Select
-                        value={currentStatusRecord?.status || ''}
+                        value={displayStatus}
                         onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
                         disabled={isValidated || mission !== null}
                       >
@@ -286,7 +303,7 @@ export default function AttendancePage() {
                           <SelectValue placeholder="Changer statut..." />
                         </SelectTrigger>
                         <SelectContent>
-                          {statusOptions.filter(o => o.value !== 'mission').map(option => (
+                          {statusOptions.map(option => (
                             <SelectItem key={option.value} value={option.value}>
                               {option.label}
                             </SelectItem>
