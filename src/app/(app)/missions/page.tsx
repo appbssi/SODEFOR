@@ -42,7 +42,7 @@ export default function MissionsPage() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold">Gestion des Missions</h1>
+          <h1 className="text-2xl font-bold">Gestion des T.P.P.H.T</h1>
           <p className="text-muted-foreground">Créez et gérez les missions de votre personnel.</p>
         </div>
         <Button onClick={handleNewMission} className="gap-2">
