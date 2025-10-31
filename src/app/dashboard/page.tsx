@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
-import { Users, UserX, Plane } from 'lucide-react';
+import { Users, UserCheck, UserX, Plane, UserMinus } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function DashboardPage() {
@@ -16,6 +16,12 @@ export default function DashboardPage() {
       color: 'text-foreground',
     },
     {
+      title: 'Présents Aujourd\'hui',
+      value: summary.presentCount,
+      icon: UserCheck,
+      color: 'text-green-500',
+    },
+    {
       title: 'Absents Aujourd\'hui',
       value: summary.absentCount,
       icon: UserX,
@@ -27,11 +33,17 @@ export default function DashboardPage() {
       icon: Plane,
       color: 'text-blue-500',
     },
+    {
+      title: 'En Permission Aujourd\'hui',
+      value: summary.permissionCount,
+      icon: UserMinus,
+      color: 'text-orange-500',
+    },
   ];
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
