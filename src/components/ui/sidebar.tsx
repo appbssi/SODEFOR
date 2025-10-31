@@ -69,6 +69,8 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile()
     const [openMobile, setOpenMobile] = React.useState(false)
+    const [isMounted, setIsMounted] = React.useState(false);
+
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -85,11 +87,16 @@ const SidebarProvider = React.forwardRef<
       },
       [setOpenProp, open]
     )
+
+    React.useEffect(() => {
+      setIsMounted(true);
+    }, []);
     
     // This effect sets the cookie to keep the sidebar state.
     React.useEffect(() => {
+        if(typeof document === 'undefined' || !isMounted) return;
         document.cookie = `${SIDEBAR_COOKIE_NAME}=${open}; path=/; max-age=${SIDEBAR_COOKIE_MAX_AGE}`
-    }, [open])
+    }, [open, isMounted])
 
     // Helper to toggle the sidebar.
     const toggleSidebar = React.useCallback(() => {
@@ -130,6 +137,10 @@ const SidebarProvider = React.forwardRef<
       }),
       [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
     )
+    
+    if (!isMounted) {
+      return null;
+    }
 
     return (
       <SidebarContext.Provider value={contextValue}>
