@@ -33,18 +33,20 @@ import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
 
-const statusIcons: { [key in AttendanceStatus]: string } = {
+const statusIcons: { [key in AttendanceStatus | 'N/A']: string } = {
   present: '✔️',
   absent: '❌',
   mission: '✈️',
   permission: '🗓️',
+  'N/A': '-'
 };
 
-const statusTooltips: { [key in AttendanceStatus]: string } = {
+const statusTooltips: { [key in AttendanceStatus | 'N/A']: string } = {
   present: 'Présent',
   absent: 'Absent',
   mission: 'En Mission',
   permission: 'En Permission',
+  'N/A': 'Non Renseigné'
 };
 
 export default function ReportsPage() {
@@ -237,9 +239,7 @@ export default function ReportsPage() {
                       <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
                       {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
                         <TableCell key={index} className="text-center">
-                          {status !== 'N/A' ? (
-                            <span title={statusTooltips[status as AttendanceStatus]}>{statusIcons[status as AttendanceStatus]}</span>
-                          ) : <span className="text-muted-foreground">-</span>}
+                           <span title={statusTooltips[status]}>{statusIcons[status]}</span>
                         </TableCell>
                       ))}
                     </TableRow>
