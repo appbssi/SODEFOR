@@ -5,7 +5,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription
 } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
 import { Users, UserX, Plane } from 'lucide-react';
