@@ -16,7 +16,6 @@ import type { Mission } from '@/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { MissionFormDialog } from '@/components/mission-form-dialog';
-import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   DropdownMenu,
@@ -315,5 +314,3 @@ export default function MissionsPage() {
     </>
   );
 }
-
-    

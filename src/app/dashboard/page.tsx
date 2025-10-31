@@ -8,39 +8,12 @@ import {
   CardDescription
 } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
-import type { Personnel } from '@/types';
-import { Users, UserCheck, UserX, Plane } from 'lucide-react';
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  ChartLegend,
-  ChartLegendContent,
-} from '@/components/ui/chart';
-import { PieChart, Pie, Cell } from 'recharts';
+import { Users, UserX, Plane } from 'lucide-react';
 import { useMemo } from 'react';
 import { isWithinInterval, parseISO, startOfDay } from 'date-fns';
 
-const ICONS: { [key: string]: React.ElementType } = {
-  present: UserCheck,
-  absent: UserX,
-  mission: Plane,
-};
-
-const STATUS_TRANSLATION: { [key: string]: string } = {
-  present: 'Présent',
-  absent: 'Absent',
-  mission: 'En Mission',
-};
-
-const COLORS: { [key: string]: string } = {
-  present: 'hsl(var(--chart-2))',
-  absent: 'hsl(var(--chart-5))',
-  mission: 'hsl(var(--chart-4))',
-};
-
 export default function DashboardPage() {
-  const { personnel, attendance, missions, getPersonnelById } = useApp();
+  const { personnel, attendance, missions } = useApp();
 
   const today = new Date().toISOString().split('T')[0];
   const todaysAttendance = attendance.filter(a => a.date === today);
@@ -101,7 +74,6 @@ export default function DashboardPage() {
 
   const missionCount = personnelInActiveMissions.size;
   const absentCount = absentPersonnel.size;
-  const presentCount = totalPersonnel - unavailablePersonnel.size;
 
   const stats = [
     { title: 'Total du Personnel', value: totalPersonnel, icon: Users, color: 'text-foreground' },
@@ -109,23 +81,9 @@ export default function DashboardPage() {
     { title: 'En Mission', value: missionCount, icon: Plane, color: 'text-blue-600' },
   ];
 
-  const chartData = useMemo(() => [
-    { name: 'Présents', value: Math.max(0, presentCount), fill: COLORS.present },
-    { name: 'Absents', value: absentCount, fill: COLORS.absent },
-    { name: 'En Mission', value: missionCount, fill: COLORS.mission },
-  ].filter(d => d.value > 0), [presentCount, absentCount, missionCount]);
-
-  const chartConfig = useMemo(() => {
-    const config: any = {};
-     chartData.forEach(item => {
-      config[item.name] = { label: item.name, color: item.fill };
-    });
-    return config
-  }, [chartData]);
-
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {stats.map(stat => (
             <Card key={stat.title}>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">

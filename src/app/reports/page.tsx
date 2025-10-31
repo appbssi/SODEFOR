@@ -80,12 +80,6 @@ export default function ReportsPage() {
           return record.status;
         }
 
-        const missionRecord = attendance.find(a => 
-            a.personnelId === person.id && a.status === 'mission' && a.date === dayString && a.missionId
-        );
-        const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
-        if(activeMission) return 'mission';
-
         const onPermission = attendance.some(a => {
             if (a.personnelId === person.id && a.permissionDuration?.start && a.permissionDuration?.end) {
                 try {
@@ -98,7 +92,7 @@ export default function ReportsPage() {
         });
         if(onPermission) return 'permission';
         
-        return 'N/A'; // Default to N/A
+        return 'N/A';
       });
 
       const summary = {
