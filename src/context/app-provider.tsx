@@ -97,7 +97,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
 
     // 4. Default status
-    return { date, status: 'N/A' };
+    return { date, status: 'present' };
   }
 
   const getPersonnelStatusForToday = (personnelId: string): PersonnelDailyStatus => {
@@ -147,7 +147,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const dailyStatuses = personnel.map(p => getPersonnelStatusForToday(p.id));
     
     return dailyStatuses.reduce((acc, statusInfo) => {
-        if(statusInfo.status !== 'N/A') acc.totalPersonnel++;
+        acc.totalPersonnel++;
         if (statusInfo.status === 'present') acc.presentCount++;
         else if (statusInfo.status === 'absent') acc.absentCount++;
         else if (statusInfo.status === 'mission') acc.missionCount++;
@@ -155,7 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return acc;
     }, { totalPersonnel: 0, presentCount: 0, absentCount: 0, missionCount: 0, permissionCount: 0 });
 
-  }, [personnel, attendance, missions, loading]);
+  }, [personnel, attendance, missions, loading, today]);
 
 
   const addPersonnel = (person: Omit<Personnel, 'id'>) => {
