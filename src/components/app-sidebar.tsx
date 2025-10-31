@@ -40,7 +40,7 @@ export function AppSidebar() {
         <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
             <Shield className="size-8 flex-shrink-0 text-primary" />
             <h1 className="font-semibold text-xl text-sidebar-foreground group-data-[collapsible=icon]:hidden">
-              Personnel Tracker
+              SODEFOR
             </h1>
         </div>
       </SidebarHeader>
