@@ -98,7 +98,7 @@ export default function ReportsPage() {
         });
         if(onPermission) return 'permission';
         
-        return 'absent'; // Default to absent
+        return 'N/A'; // Default to N/A
       });
 
       const summary = {
