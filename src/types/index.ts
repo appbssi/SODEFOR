@@ -9,18 +9,18 @@ export interface Personnel {
   email: string;
 }
 
-export type AttendanceStatus = 'present' | 'absent' | 'mission' | 'permission';
+export type AttendanceStatus = 'present' | 'absent' | 'mission' | 'permission' | 'N/A';
 
 export interface AttendanceRecord {
-  id?: string; // Firestore document ID
+  id?: string; // Firestore document ID, format: ${personnelId}_${date}
   personnelId: string;
   date: string; // YYYY-MM-DD
   status: AttendanceStatus;
   permissionDuration?: {
     start: string;
     end: string;
-  };
-  missionId?: string; // Reference to the mission
+  } | null;
+  missionId?: string | null; // Reference to the mission
 }
 
 export interface DailyStatus {
@@ -41,4 +41,10 @@ export interface Mission {
     status?: 'active' | 'completed';
     vehicle?: string;
     kilometers?: number;
+}
+
+export interface PersonnelDailyStatus {
+    date: string; // YYYY-MM-DD
+    status: AttendanceStatus;
+    missionId?: string | null;
 }

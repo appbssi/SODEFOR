@@ -10,7 +10,7 @@ import {
 import { PersonnelForm } from '@/components/personnel-form';
 import { Button } from '@/components/ui/button';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { useApp } from '@/context/app-provider';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -47,14 +47,10 @@ export default function EditPersonnelPage() {
                             <Skeleton className="h-4 w-1/4" />
                             <Skeleton className="h-10 w-full" />
                         </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-1/4" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
-                        <div className="space-y-2">
-                            <Skeleton className="h-4 w-1/4" />
-                            <Skeleton className="h-10 w-full" />
-                        </div>
+                    </div>
+                    <div className="space-y-2">
+                        <Skeleton className="h-4 w-1/4" />
+                        <Skeleton className="h-10 w-full" />
                     </div>
                  </div>
             ) : personnel ? (

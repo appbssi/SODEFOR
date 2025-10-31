@@ -55,7 +55,8 @@ export default function VehicleTrackingPage() {
   const missionsWithMileage = useMemo(() => {
     return missions
       .filter(m => m.kilometers && m.kilometers > 0)
-      .filter(m => format(new Date(m.date), 'yyyy-MM') === selectedMonth);
+      .filter(m => format(new Date(m.date), 'yyyy-MM') === selectedMonth)
+      .sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   }, [missions, selectedMonth]);
 
   const totalMonthlyKilometers = useMemo(() => {
@@ -90,27 +91,18 @@ export default function VehicleTrackingPage() {
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        const imgWidth = canvas.width;
-        const imgHeight = canvas.height;
-        const ratio = imgWidth / imgHeight;
-        
-        let finalImgWidth = pdfWidth - 20; // with margin
-        let finalImgHeight = finalImgWidth / ratio;
-        
-        if (finalImgHeight > pdfHeight - 20) {
-            finalImgHeight = pdfHeight - 20;
-            finalImgWidth = finalImgHeight * ratio;
-        }
-
-        const x = (pdfWidth - finalImgWidth) / 2;
-        const y = 10;
         
         const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Rapport';
         
         pdf.setFontSize(16);
-        pdf.text(`Bilan Kilomètrique - ${monthLabel}`, pdfWidth / 2, y, { align: 'center' });
+        pdf.text(`Bilan Kilomètrique - ${monthLabel}`, pdfWidth / 2, 15, { align: 'center' });
 
-        pdf.addImage(imgData, 'PNG', x, y + 10, finalImgWidth, finalImgHeight);
+        const imgProps = pdf.getImageProperties(imgData);
+        const imgWidth = pdfWidth - 20;
+        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+        let position = 25;
+        
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
         
         pdf.save(`rapport_kilometrage_${monthLabel.replace(' ', '_')}.pdf`);
         
@@ -168,7 +160,7 @@ export default function VehicleTrackingPage() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={handleExportPDF} variant="outline" className="w-full sm:w-auto gap-2" disabled={isExporting || loading}>
+            <Button onClick={handleExportPDF} variant="outline" className="w-full sm:w-auto gap-2" disabled={isExporting || loading || missionsWithMileage.length === 0}>
                 <Download className="h-4 w-4" />
                 {isExporting ? 'Exportation...' : 'Exporter en PDF'}
             </Button>
@@ -192,9 +184,10 @@ export default function VehicleTrackingPage() {
         </div>
 
 
-        <Card ref={reportTableRef}>
+        <div ref={reportTableRef}>
+        <Card>
           <CardHeader>
-            <CardTitle>Détails des Missions</CardTitle>
+            <CardTitle>Détails des Missions - {monthOptions.find(m => m.value === selectedMonth)?.label}</CardTitle>
             <CardDescription>Liste des missions avec kilométrage pour le mois sélectionné.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -248,6 +241,7 @@ export default function VehicleTrackingPage() {
             </Table>
           </CardContent>
         </Card>
+        </div>
       </div>
 
       <VehicleMissionFormDialog 

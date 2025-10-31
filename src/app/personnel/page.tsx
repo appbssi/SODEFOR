@@ -23,7 +23,6 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
-    DropdownMenuSeparator,
     DropdownMenuTrigger,
   } from '@/components/ui/dropdown-menu';
 import {
@@ -125,8 +124,8 @@ export default function PersonnelPage() {
                 ))
               ) : personnel.map((person: Personnel) => (
                 <TableRow key={person.id}>
-                  <TableCell>{person.lastName} {person.firstName}</TableCell>
-                  <TableCell className="font-medium">{person.matricule}</TableCell>
+                  <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
+                  <TableCell>{person.matricule}</TableCell>
                   <TableCell>{person.rank}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.contact}</TableCell>
                   <TableCell className="hidden md:table-cell">{person.email}</TableCell>
@@ -145,7 +144,7 @@ export default function PersonnelPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem onClick={() => handleEdit(person.id)}>Modifier</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => setPersonnelToDelete(person)}>Supprimer</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => setPersonnelToDelete(person)} className="text-red-500">Supprimer</DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -174,5 +173,3 @@ export default function PersonnelPage() {
     </>
   );
 }
-
-    

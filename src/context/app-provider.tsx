@@ -1,8 +1,8 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { createContext, useContext, useState, useEffect } from 'react';
-import type { Personnel, AttendanceRecord, DailyStatus, Mission } from '@/types';
+import { createContext, useContext, useMemo } from 'react';
+import type { Personnel, AttendanceRecord, DailyStatus, Mission, AttendanceStatus, PersonnelDailyStatus } from '@/types';
 import { useCollection, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 import {
@@ -12,8 +12,15 @@ import {
   deleteDocumentNonBlocking,
 } from '@/firebase/non-blocking-updates';
 import { getDaysBetweenDates } from '@/lib/utils';
-import { isWithinInterval, parseISO, startOfDay, parse } from 'date-fns';
+import { isWithinInterval, parseISO, startOfDay, format } from 'date-fns';
 
+interface Summary {
+    totalPersonnel: number;
+    presentCount: number;
+    absentCount: number;
+    missionCount: number;
+    permissionCount: number;
+}
 interface AppContextType {
   personnel: Personnel[];
   attendance: AttendanceRecord[];
@@ -26,11 +33,14 @@ interface AppContextType {
   addMission: (mission: Omit<Mission, 'id' | 'status'>) => void;
   updateMission: (missionId: string, data: Partial<Mission>) => void;
   deleteMission: (missionId: string) => void;
-  getAttendanceForDate: (date: string) => AttendanceRecord[];
   getPersonnelById: (id: string) => Personnel | undefined;
+  getMissionById: (id: string) => Mission | undefined;
   todaysStatus: DailyStatus | null;
   validateTodaysAttendance: () => void;
   reactivateTodaysAttendance: () => void;
+  getPersonnelStatusForToday: (personnelId: string) => PersonnelDailyStatus;
+  getPersonnelStatusForDateRange: (personnelId: string, startDate: string, endDate: string) => PersonnelDailyStatus[];
+  summary: Summary;
   loading: boolean;
 }
 
@@ -38,149 +48,198 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const firestore = useFirestore();
-
-  const personnelQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'personnel');
-  }, [firestore]);
-
-  const { data: personnelData, isLoading: personnelLoading } = useCollection<Personnel>(personnelQuery);
-  const personnel = (personnelData || []).sort((a, b) => a.lastName.localeCompare(b.lastName));
-
   const today = new Date().toISOString().split('T')[0];
-  const attendanceQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'attendance');
-  }, [firestore]);
 
-  const { data: attendanceData, isLoading: attendanceLoading, setData: setAttendance } = useCollection<AttendanceRecord>(attendanceQuery);
-  const attendance = attendanceData || [];
-  
-  const missionsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return collection(firestore, 'missions');
-  }, [firestore]);
+  const personnelQuery = useMemoFirebase(() => firestore ? collection(firestore, 'personnel') : null, [firestore]);
+  const { data: personnelData, isLoading: personnelLoading } = useCollection<Personnel>(personnelQuery);
+  const personnel = useMemo(() => (personnelData || []).sort((a, b) => a.lastName.localeCompare(b.lastName)), [personnelData]);
 
-  const { data: missionsData, isLoading: missionsLoading, setData: setMissions } = useCollection<Mission>(missionsQuery);
-  const missions = (missionsData || []).sort((a,b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
-  const todaysStatusRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'dailyStatus', today);
-  }, [firestore, today]);
+  const attendanceQuery = useMemoFirebase(() => firestore ? collection(firestore, 'attendance') : null, [firestore]);
+  const { data: attendanceData, isLoading: attendanceLoading } = useCollection<AttendanceRecord>(attendanceQuery);
+  const attendance = useMemo(() => attendanceData || [], [attendanceData]);
 
+  const missionsQuery = useMemoFirebase(() => firestore ? collection(firestore, 'missions') : null, [firestore]);
+  const { data: missionsData, isLoading: missionsLoading } = useCollection<Mission>(missionsQuery);
+  const missions = useMemo(() => (missionsData || []).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()), [missionsData]);
+
+  const todaysStatusRef = useMemoFirebase(() => firestore ? doc(firestore, 'dailyStatus', today) : null, [firestore, today]);
   const { data: todaysStatus, isLoading: statusLoading } = useDoc<DailyStatus>(todaysStatusRef);
+  
+  const loading = personnelLoading || attendanceLoading || statusLoading || missionsLoading;
 
-  // Auto-complete missions
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      const now = new Date();
-      const activeMissions = missions.filter(m => m.status === 'active' && m.endTime);
-      
-      activeMissions.forEach(mission => {
-        if (mission.date && mission.endTime) {
-          const [hours, minutes] = mission.endTime.split(':').map(Number);
-          const missionEndDateTime = new Date(mission.date);
-          missionEndDateTime.setHours(hours, minutes, 0, 0);
+  const getPersonnelStatusOnDate = (personnelId: string, date: string): PersonnelDailyStatus => {
+    // 1. Check for a direct attendance record for that day
+    const directRecord = attendance.find(a => a.personnelId === personnelId && a.date === date);
+    if (directRecord) {
+      return { date, status: directRecord.status, missionId: directRecord.missionId };
+    }
 
-          if (now > missionEndDateTime) {
-            updateMission(mission.id, { status: 'completed' });
-          }
+    // 2. Check if the person is on a mission that is active on that day
+    const missionRecord = missions.find(m => m.personnelIds.includes(personnelId) && m.date === date && m.status === 'active');
+    if (missionRecord) {
+        return { date, status: 'mission', missionId: missionRecord.id };
+    }
+
+    // 3. Check if the person is on a multi-day permission
+    const todayDate = startOfDay(parseISO(date));
+    const permissionRecord = attendance.find(a => 
+      a.personnelId === personnelId &&
+      a.status === 'permission' &&
+      a.permissionDuration?.start &&
+      a.permissionDuration?.end &&
+      isWithinInterval(todayDate, { 
+        start: startOfDay(parseISO(a.permissionDuration.start)), 
+        end: startOfDay(parseISO(a.permissionDuration.end)) 
+      })
+    );
+    if (permissionRecord) {
+      return { date, status: 'permission' };
+    }
+
+    // 4. Default status
+    return { date, status: 'present' };
+  }
+
+  const getPersonnelStatusForToday = (personnelId: string): PersonnelDailyStatus => {
+    return getPersonnelStatusOnDate(personnelId, today);
+  };
+  
+  const getPersonnelStatusForDateRange = (personnelId: string, startDate: string, endDate: string): PersonnelDailyStatus[] => {
+    const dates = getDaysBetweenDates(startDate, endDate);
+    return dates.map(date => {
+        // Find a record with a specific status on that day
+        const directRecord = attendance.find(a => a.personnelId === personnelId && a.date === date);
+        if (directRecord) {
+            return { date, status: directRecord.status, missionId: directRecord.missionId };
         }
-      });
-    }, 60000); // Check every minute
 
-    return () => clearInterval(intervalId);
-  }, [missions]);
+        // Check for multi-day permission covering that day
+        const dateObj = startOfDay(parseISO(date));
+        const permissionRecord = attendance.find(a => 
+            a.personnelId === personnelId && 
+            a.status === 'permission' &&
+            a.permissionDuration?.start &&
+            a.permissionDuration?.end &&
+            isWithinInterval(dateObj, {
+                start: startOfDay(parseISO(a.permissionDuration.start)),
+                end: startOfDay(parseISO(a.permissionDuration.end))
+            })
+        );
+        if (permissionRecord) {
+            return { date, status: 'permission' };
+        }
+
+        // Check for an active mission on that day
+        const missionRecord = missions.find(m => m.personnelIds.includes(personnelId) && m.date === date && m.status === 'active');
+        if (missionRecord) {
+            return { date, status: 'mission', missionId: missionRecord.id };
+        }
+        
+        // Default to N/A if no information found
+        return { date, status: 'N/A' };
+    });
+  };
+
+  const summary: Summary = useMemo(() => {
+    if (loading) {
+        return { totalPersonnel: 0, presentCount: 0, absentCount: 0, missionCount: 0, permissionCount: 0 };
+    }
+    const dailyStatuses = personnel.map(p => getPersonnelStatusForToday(p.id));
+    
+    return dailyStatuses.reduce((acc, statusInfo) => {
+        acc.totalPersonnel++;
+        if (statusInfo.status === 'present') acc.presentCount++;
+        else if (statusInfo.status === 'absent') acc.absentCount++;
+        else if (statusInfo.status === 'mission') acc.missionCount++;
+        else if (statusInfo.status === 'permission') acc.permissionCount++;
+        return acc;
+    }, { totalPersonnel: 0, presentCount: 0, absentCount: 0, missionCount: 0, permissionCount: 0 });
+
+  }, [personnel, attendance, missions, loading]);
 
 
   const addPersonnel = (person: Omit<Personnel, 'id'>) => {
     if (!firestore) return;
     const personnelCollection = collection(firestore, 'personnel');
-    addDocumentNonBlocking(personnelCollection, person)
-      .then((docRef) => {
-        if(!docRef) return;
-        const newPersonnelId = docRef.id;
-        const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelId}_${today}`);
-        const newRecord = {
-          personnelId: newPersonnelId,
-          date: today,
-          status: 'present' as const,
-        };
-        setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
-      });
+    addDocumentNonBlocking(personnelCollection, person);
   };
 
   const updatePersonnel = (id: string, person: Partial<Omit<Personnel, 'id'>>) => {
     if (!firestore) return;
-    const personnelDocRef = doc(firestore, 'personnel', id);
-    updateDocumentNonBlocking(personnelDocRef, person);
+    updateDocumentNonBlocking(doc(firestore, 'personnel', id), person);
   };
   
-  const deletePersonnel = (id: string) => {
+  const deletePersonnel = async (id: string) => {
       if (!firestore) return;
-      const personnelDocRef = doc(firestore, 'personnel', id);
-      deleteDocumentNonBlocking(personnelDocRef);
+      const batch = writeBatch(firestore);
+      
+      // Delete personnel document
+      batch.delete(doc(firestore, 'personnel', id));
+      
+      // Find and delete related attendance records
+      const relatedAttendance = attendance.filter(a => a.personnelId === id);
+      relatedAttendance.forEach(att => {
+        if(att.id) {
+          batch.delete(doc(firestore, 'attendance', att.id));
+        }
+      });
+
+      await batch.commit();
   };
 
   const addMultiplePersonnel = async (personnelList: Omit<Personnel, 'id'>[]) => {
      if (!firestore) return;
-    // Non-blocking optimistic update for multiple personnel
-    personnelList.forEach(person => {
-        const tempId = `temp_${Date.now()}_${Math.random()}`;
-        const newPersonnelRef = firestore ? doc(collection(firestore, 'personnel')) : null;
-        
-        if (newPersonnelRef) {
-            addDocumentNonBlocking(collection(firestore, 'personnel'), person);
-
-            const attendanceDocRef = doc(firestore, 'attendance', `${newPersonnelRef.id}_${today}`);
-            const newRecord = {
-                personnelId: newPersonnelRef.id,
-                date: today,
-                status: 'present' as const,
-            };
-            setDocumentNonBlocking(attendanceDocRef, newRecord, { merge: true });
-        }
-    });
-    return Promise.resolve();
+     const batch = writeBatch(firestore);
+     personnelList.forEach(person => {
+        const newDocRef = doc(collection(firestore, 'personnel'));
+        batch.set(newDocRef, person);
+     });
+     await batch.commit();
   };
 
   const updateAttendance = (record: Partial<AttendanceRecord> & { personnelId: string; date: string }) => {
     if (!firestore) return;
-    const attendanceId = `${record.personnelId}_${record.date}`;
-    const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+    
+    const { personnelId, date, status } = record;
 
-    const fullRecord: Partial<AttendanceRecord> = {
-      personnelId: record.personnelId,
-      date: record.date,
-      status: record.status || 'present',
-      ...record,
-    };
-
-    setDocumentNonBlocking(attendanceDocRef, fullRecord, { merge: true });
+    if(status === 'permission' && record.permissionDuration?.start && record.permissionDuration?.end) {
+        const dates = getDaysBetweenDates(record.permissionDuration.start, record.permissionDuration.end);
+        const batch = writeBatch(firestore);
+        dates.forEach(d => {
+            const attendanceId = `${personnelId}_${d}`;
+            const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+            const fullRecord = { ...record, date: d, id: attendanceId };
+            batch.set(attendanceDocRef, fullRecord, { merge: true });
+        });
+        batch.commit();
+    } else {
+        const attendanceId = `${personnelId}_${date}`;
+        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+        setDocumentNonBlocking(attendanceDocRef, record, { merge: true });
+    }
   };
   
   const addMission = (missionData: Omit<Mission, 'id' | 'status'>) => {
     if (!firestore) return;
-    const missionsCollection = collection(firestore, 'missions');
-    addDocumentNonBlocking(missionsCollection, { ...missionData, status: 'active' })
-      .then(docRef => {
-        if (!docRef) return;
-        const newMissionId = docRef.id;
-        if (missionData.personnelIds && missionData.personnelIds.length > 0) {
-          missionData.personnelIds.forEach(personnelId => {
-            const attendanceId = `${personnelId}_${missionData.date}`;
-            const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
-            const attendanceRecord: Omit<AttendanceRecord, 'id'> = {
-              personnelId,
-              date: missionData.date,
-              status: 'mission',
-              missionId: newMissionId,
-            };
-            setDocumentNonBlocking(attendanceDocRef, attendanceRecord, { merge: true });
-          });
-        }
+    const batch = writeBatch(firestore);
+    const newMissionRef = doc(collection(firestore, 'missions'));
+    
+    batch.set(newMissionRef, { ...missionData, status: 'active' });
+
+    if (missionData.personnelIds && missionData.personnelIds.length > 0) {
+      missionData.personnelIds.forEach(personnelId => {
+        const attendanceId = `${personnelId}_${missionData.date}`;
+        const attendanceDocRef = doc(firestore, 'attendance', attendanceId);
+        const attendanceRecord: Omit<AttendanceRecord, 'id'> = {
+          personnelId,
+          date: missionData.date,
+          status: 'mission',
+          missionId: newMissionRef.id,
+        };
+        batch.set(attendanceDocRef, attendanceRecord, { merge: true });
       });
+    }
+    batch.commit();
   };
 
   const updateMission = (missionId: string, data: Partial<Mission>) => {
@@ -188,139 +247,98 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const missionRef = doc(firestore, 'missions', missionId);
     
     const originalMission = missions.find(m => m.id === missionId);
+    if (!originalMission) return;
+
+    const batch = writeBatch(firestore);
+    batch.update(missionRef, data);
+
+    const newPersonnelIds = new Set(data.personnelIds || originalMission.personnelIds);
+    const oldPersonnelIds = new Set(originalMission.personnelIds);
+    const missionDate = data.date || originalMission.date;
+
+    // Personnel added
+    newPersonnelIds.forEach(id => {
+        if (!oldPersonnelIds.has(id)) {
+            const attendanceRef = doc(firestore, 'attendance', `${id}_${missionDate}`);
+            batch.set(attendanceRef, { personnelId: id, date: missionDate, status: 'mission', missionId }, { merge: true });
+        }
+    });
+
+    // Personnel removed
+    oldPersonnelIds.forEach(id => {
+        if (!newPersonnelIds.has(id)) {
+            const attendanceRef = doc(firestore, 'attendance', `${id}_${missionDate}`);
+            batch.set(attendanceRef, { personnelId: id, date: missionDate, status: 'present', missionId: null }, { merge: true });
+        }
+    });
     
-    // Optimistically update the mission document
-    updateDocumentNonBlocking(missionRef, data);
-
-    const newPersonnelIds = new Set(data.personnelIds || []);
-    const oldPersonnelIds = new Set(originalMission?.personnelIds || []);
-    const missionDate = data.date || originalMission?.date;
-
-    if (missionDate) {
-        // Personnel added to the mission
-        newPersonnelIds.forEach(id => {
-            if (!oldPersonnelIds.has(id)) {
-                const attendanceRef = doc(firestore, 'attendance', `${id}_${missionDate}`);
-                setDocumentNonBlocking(attendanceRef, { status: 'mission', missionId }, { merge: true });
-            }
-        });
-
-        // Personnel removed from the mission
-        oldPersonnelIds.forEach(id => {
-            if (!newPersonnelIds.has(id)) {
-                const attendanceRef = doc(firestore, 'attendance', `${id}_${missionDate}`);
-                updateDocumentNonBlocking(attendanceRef, { status: 'present', missionId: '' });
-            }
-        });
-    }
+    batch.commit();
   };
 
-  const deleteMission = (missionId: string) => {
+  const deleteMission = async (missionId: string) => {
     if (!firestore) return;
     const missionRef = doc(firestore, 'missions', missionId);
     
     const missionToDelete = missions.find(m => m.id === missionId);
+    if (!missionToDelete) return;
     
+    const batch = writeBatch(firestore);
+
     // Reset attendance for associated personnel
-    if (missionToDelete && missionToDelete.personnelIds) {
+    if (missionToDelete.personnelIds) {
       missionToDelete.personnelIds.forEach(personnelId => {
         const attendanceId = `${personnelId}_${missionToDelete.date}`;
         const attendanceRef = doc(firestore, 'attendance', attendanceId);
-        // This assumes reverting to 'present'. You might want a more complex logic.
-        updateDocumentNonBlocking(attendanceRef, { status: 'present', missionId: '' });
+        batch.set(attendanceRef, { status: 'present', missionId: null }, { merge: true });
       });
     }
-
-    deleteDocumentNonBlocking(missionRef);
+    
+    batch.delete(missionRef);
+    await batch.commit();
   };
 
-    const validateTodaysAttendance = () => {
-        if (!firestore || !todaysStatusRef) return;
-        
-        const batch = writeBatch(firestore);
-        const todayDate = startOfDay(new Date());
+  const validateTodaysAttendance = () => {
+    if (!firestore || !todaysStatusRef) return;
+    
+    const batch = writeBatch(firestore);
 
-        personnel.forEach(p => {
-            const attendanceId = `${p.id}_${today}`;
-            const attendanceRef = doc(firestore, 'attendance', attendanceId);
-            
-            // Get today's record for the person
-            const todaysRecord = attendance.find(a => a.date === today && a.personnelId === p.id);
-            
-            // Check for mission from attendance record
-            const missionRecord = attendance.find(a => 
-                a.personnelId === p.id && a.status === 'mission' && a.date === today && a.missionId
-            );
-            const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
-
-            // Check for multi-day permission
-            const onPermission = attendance.some(a => {
-                if (a.personnelId === p.id && a.permissionDuration?.start && a.permissionDuration?.end) {
-                    try {
-                        const start = startOfDay(parseISO(a.permissionDuration.start));
-                        const end = startOfDay(parseISO(a.permissionDuration.end));
-                        return isWithinInterval(todayDate, { start, end });
-                    } catch { return false }
-                }
-                return false;
-            });
-            
-            let finalStatus: AttendanceStatus;
-            let recordToSave: Partial<AttendanceRecord> = {};
-
-            if (todaysRecord) {
-                // If a record exists for today, its status is the source of truth
-                finalStatus = todaysRecord.status;
-                recordToSave = { ...todaysRecord };
-            } else if (activeMission) {
-                finalStatus = 'mission';
-                recordToSave = { missionId: activeMission.id };
-            } else if (onPermission) {
-                finalStatus = 'permission';
-                // Find the specific permission record to preserve its duration
-                const permissionRecord = attendance.find(a => a.personnelId === p.id && onPermission);
-                if (permissionRecord) {
-                    recordToSave = { permissionDuration: permissionRecord.permissionDuration };
-                }
-            } else {
-                // Default to 'present' if no other status applies
-                finalStatus = 'present';
-            }
-
-            batch.set(attendanceRef, {
-                personnelId: p.id,
-                date: today,
-                status: finalStatus,
-                ...recordToSave
-            }, { merge: true });
-        });
-
-        const validationData = {
-            validated: true,
-            validatedAt: new Date().toISOString(),
+    personnel.forEach(p => {
+        const statusInfo = getPersonnelStatusForToday(p.id);
+        const attendanceId = `${p.id}_${today}`;
+        const attendanceRef = doc(firestore, 'attendance', attendanceId);
+        const recordToSave: Partial<AttendanceRecord> = {
+            personnelId: p.id,
+            date: today,
+            status: statusInfo.status,
+            missionId: statusInfo.missionId || null,
         };
-        batch.set(todaysStatusRef, validationData, { merge: true });
 
-        batch.commit().catch(console.error);
+        // Find and preserve permission duration if it exists for today
+        const permissionRecord = attendance.find(a => a.personnelId === p.id && a.date === today && a.status === 'permission' && a.permissionDuration);
+        if (permissionRecord) {
+            recordToSave.permissionDuration = permissionRecord.permissionDuration;
+        }
+
+        batch.set(attendanceRef, recordToSave, { merge: true });
+    });
+
+    const validationData = {
+        validated: true,
+        validatedAt: Timestamp.now(),
     };
+    batch.set(todaysStatusRef, validationData, { merge: true });
+
+    batch.commit().catch(console.error);
+  };
 
   const reactivateTodaysAttendance = () => {
     if (!todaysStatusRef) return;
-    const reactivationData = {
-      validated: false,
-    };
-    updateDocumentNonBlocking(todaysStatusRef, reactivationData);
-};
-
-  const getAttendanceForDate = (date: string) => {
-    return attendance.filter(r => r.date === date);
-  };
-  
-  const getPersonnelById = (id: string) => {
-    return personnel.find(p => p.id === id);
+    updateDocumentNonBlocking(todaysStatusRef, { validated: false });
   };
 
-  const loading = personnelLoading || attendanceLoading || statusLoading || missionsLoading;
+  const getPersonnelById = (id: string) => personnel.find(p => p.id === id);
+  const getMissionById = (id: string) => missions.find(m => m.id === id);
+
 
   const value: AppContextType = {
     personnel,
@@ -334,11 +352,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     addMission,
     updateMission,
     deleteMission,
-    getAttendanceForDate,
     getPersonnelById,
+    getMissionById,
     todaysStatus: todaysStatus || null,
     validateTodaysAttendance,
     reactivateTodaysAttendance,
+    getPersonnelStatusForToday,
+    getPersonnelStatusForDateRange,
+    summary,
     loading,
   };
 

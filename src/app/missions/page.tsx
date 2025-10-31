@@ -136,14 +136,12 @@ export default function MissionsPage() {
                                             <DropdownMenuItem onClick={() => handleEditMission(mission)}>
                                                 Modifier
                                             </DropdownMenuItem>
-                                            {mission.endTime && (
-                                                <DropdownMenuItem onClick={() => handleMarkAsDone(mission)}>
-                                                    Marquer comme terminée
-                                                </DropdownMenuItem>
-                                            )}
+                                            <DropdownMenuItem onClick={() => handleMarkAsDone(mission)}>
+                                                Marquer comme terminée
+                                            </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem 
-                                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                className="text-red-500 focus:text-red-500"
                                                 onClick={() => setMissionToDelete(mission)}>
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 Supprimer
@@ -232,7 +230,7 @@ export default function MissionsPage() {
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem 
-                                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                                className="text-red-500 focus:text-red-500"
                                                 onClick={() => setMissionToDelete(mission)}>
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 Supprimer

@@ -25,7 +25,7 @@ import {
 import { useApp } from '@/context/app-provider';
 import type { AttendanceStatus, Personnel, AttendanceRecord } from '@/types';
 import { Badge } from '@/components/ui/badge';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,12 +48,12 @@ import {
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
-import { format, startOfDay, parseISO, isWithinInterval } from 'date-fns';
+import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Lock, LockOpen, Rocket, UserCheck, UserX } from 'lucide-react';
+import { Lock, LockOpen, Rocket } from 'lucide-react';
 import {
   Tooltip,
   TooltipContent,
@@ -74,8 +74,15 @@ const statusVariant: { [key in AttendanceStatus]: 'default' | 'secondary' | 'des
   permission: 'outline',
 };
 
+const allStatusLabels: { [key in AttendanceStatus]: string } = {
+    present: 'Présent',
+    absent: 'Absent',
+    mission: 'En Mission',
+    permission: 'En Permission',
+}
+
 export default function AttendancePage() {
-  const { personnel, attendance, updateAttendance, getPersonnelById, loading, todaysStatus, validateTodaysAttendance, reactivateTodaysAttendance, missions } = useApp();
+  const { personnel, getPersonnelStatusForToday, updateAttendance, loading, todaysStatus, validateTodaysAttendance, reactivateTodaysAttendance, getMissionById } = useApp();
   const { toast } = useToast();
   const today = new Date().toISOString().split('T')[0];
   const [permissionModalOpen, setPermissionModalOpen] = useState(false);
@@ -85,76 +92,22 @@ export default function AttendancePage() {
   
   const isValidated = todaysStatus?.validated;
 
-  const todaysAttendance = attendance.filter(a => a.date === today);
-
-  const personnelInActiveMissions = useMemo(() => {
-    const personnelIds = new Set<string>();
-    missions
-      .filter(m => m.status === 'active')
-      .forEach(m => {
-        m.personnelIds.forEach(id => personnelIds.add(id));
-      });
-    return personnelIds;
-  }, [missions]);
-
-  const personnelOnPermission = useMemo(() => {
-    const todayDate = startOfDay(new Date());
-    const personnelIds = new Set<string>();
-    const allPermissionRecords = attendance.filter(a => 
-        (a.status === 'permission' && a.date === today) || 
-        (a.permissionDuration?.start && a.permissionDuration?.end)
-    );
-    
-    allPermissionRecords.forEach(record => {
-      if (record.permissionDuration && record.permissionDuration.start && record.permissionDuration.end) {
-        try {
-          const start = startOfDay(parseISO(record.permissionDuration.start));
-          const end = startOfDay(parseISO(record.permissionDuration.end));
-          if (isWithinInterval(todayDate, { start, end })) {
-            personnelIds.add(record.personnelId);
-          }
-        } catch (e) {
-          console.error("Invalid permission date format:", record);
-        }
-      } else if (record.status === 'permission' && record.date === today) {
-        personnelIds.add(record.personnelId);
-      }
-    });
-    return personnelIds;
-  }, [attendance, today]);
-
-  const absentPersonnel = useMemo(() => {
-    const personnelIds = new Set<string>();
-    todaysAttendance
-        .filter(a => a.status === 'absent')
-        .forEach(a => personnelIds.add(a.personnelId));
-    return personnelIds;
-  }, [todaysAttendance]);
-  
-  const unavailablePersonnel = useMemo(() => {
-    const unavailable = new Set<string>();
-    personnelInActiveMissions.forEach(id => unavailable.add(id));
-    personnelOnPermission.forEach(id => unavailable.add(id));
-    absentPersonnel.forEach(id => unavailable.add(id));
-    return unavailable;
-  }, [personnelInActiveMissions, personnelOnPermission, absentPersonnel]);
-
-  const presentCount = personnel.length - unavailablePersonnel.size;
-  const absentCount = absentPersonnel.size;
-
-
   const handleStatusChange = (personnelId: string, newStatus: AttendanceStatus) => {
     if (newStatus === 'permission') {
-      const person = getPersonnelById(personnelId);
+      const person = personnel.find(p => p.id === personnelId);
       setSelectedPersonnel(person || null);
+      setPermissionStartDate(today);
+      setPermissionEndDate('');
       setPermissionModalOpen(true);
     } else {
       updateAttendance({
         personnelId,
         date: today,
         status: newStatus,
+        permissionDuration: null,
+        missionId: null,
       });
-      const person = getPersonnelById(personnelId);
+      const person = personnel.find(p => p.id === personnelId);
       toast({
         title: 'Statut mis à jour',
         description: `${person?.lastName} ${person?.firstName} est maintenant ${statusOptions.find(s=> s.value === newStatus)?.label}.`,
@@ -166,12 +119,13 @@ export default function AttendancePage() {
     if (selectedPersonnel && permissionStartDate && permissionEndDate) {
       updateAttendance({
         personnelId: selectedPersonnel.id,
-        date: today,
+        date: today, // This will be the start date for multi-day permissions
         status: 'permission',
         permissionDuration: {
           start: permissionStartDate,
           end: permissionEndDate,
         },
+        missionId: null,
       });
       toast({
         title: 'Statut mis à jour',
@@ -206,51 +160,7 @@ export default function AttendancePage() {
       variant: 'default',
     });
   }
-
-  const getStatusForPersonnel = (personnelId: string): AttendanceRecord | undefined => {
-    // Find the record for today for this specific person
-    let record = attendance.find(a => a.personnelId === personnelId && a.date === today);
-
-    // If no record for today, check for multi-day permission
-    if (!record) {
-        const todayDate = startOfDay(new Date());
-        const permissionRecord = attendance.find(a => 
-            a.personnelId === personnelId &&
-            a.status === 'permission' &&
-            a.permissionDuration?.start &&
-            a.permissionDuration?.end &&
-            isWithinInterval(todayDate, { 
-                start: startOfDay(parseISO(a.permissionDuration.start)), 
-                end: startOfDay(parseISO(a.permissionDuration.end)) 
-            })
-        );
-        if (permissionRecord) {
-            return permissionRecord;
-        }
-    }
-    
-    return record;
-  };
   
-  const getMissionForPersonnel = (personnelId: string) => {
-      const attendanceRecord = getStatusForPersonnel(personnelId);
-      if(attendanceRecord?.status === 'mission' && attendanceRecord.missionId) {
-          const mission = missions.find(m => m.id === attendanceRecord.missionId);
-          // Only return the mission if it's active
-          if (mission && mission.status !== 'completed') {
-            return mission;
-          }
-      }
-      return null;
-  }
-
-  const allStatusOptions: { value: AttendanceStatus; label: string }[] = [
-    { value: 'present', label: 'Présent' },
-    { value: 'absent', label: 'Absent' },
-    { value: 'mission', label: 'En Mission' },
-    { value: 'permission', label: 'En Permission' },
-  ];
-
   return (
     <>
       <div className="space-y-6">
@@ -337,23 +247,9 @@ export default function AttendancePage() {
                     </TableRow>
                   ))
                 ) : personnel.map((person) => {
-                  const currentStatusRecord = getStatusForPersonnel(person.id);
-                  const mission = getMissionForPersonnel(person.id);
-
-                  let displayStatus: AttendanceStatus;
-
-                  if (currentStatusRecord) {
-                    // A record exists for today
-                    if (currentStatusRecord.status === 'mission' && !mission) {
-                      // Mission is completed, so person is present
-                      displayStatus = 'present';
-                    } else {
-                      displayStatus = currentStatusRecord.status;
-                    }
-                  } else {
-                     // No record for today, not in mission, not on permission -> present by default
-                     displayStatus = 'present';
-                  }
+                  const statusInfo = getPersonnelStatusForToday(person.id);
+                  const displayStatus = statusInfo.status;
+                  const mission = statusInfo.missionId ? getMissionById(statusInfo.missionId) : null;
 
                   return (
                     <TableRow key={person.id}>
@@ -362,7 +258,7 @@ export default function AttendancePage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                             <Badge variant={statusVariant[displayStatus]}>
-                              {allStatusOptions.find(s => s.value === displayStatus)?.label}
+                              {allStatusLabels[displayStatus]}
                             </Badge>
                             {displayStatus === 'mission' && mission && (
                                 <TooltipProvider>
@@ -383,7 +279,7 @@ export default function AttendancePage() {
                         <Select
                           value={displayStatus}
                           onValueChange={(value) => handleStatusChange(person.id, value as AttendanceStatus)}
-                          disabled={isValidated || (displayStatus === 'mission' && mission !== null)}
+                          disabled={isValidated || displayStatus === 'mission'}
                         >
                           <SelectTrigger className="w-full md:w-[180px] float-right">
                             <SelectValue placeholder="Changer statut..." />
@@ -435,6 +331,7 @@ export default function AttendancePage() {
                 id="end-date"
                 type="date"
                 value={permissionEndDate}
+                min={permissionStartDate}
                 onChange={(e) => setPermissionEndDate(e.target.value)}
                 className="col-span-3"
               />
@@ -449,5 +346,3 @@ export default function AttendancePage() {
     </>
   );
 }
-
-    

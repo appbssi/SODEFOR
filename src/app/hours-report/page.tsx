@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/app-provider';
-import type { AttendanceStatus } from '@/types';
+import type { AttendanceStatus, Personnel, PersonnelDailyStatus } from '@/types';
 import {
   Table,
   TableBody,
@@ -27,12 +27,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDaysInMonth, format, isWithinInterval, startOfDay, parseISO } from 'date-fns';
+import { getDaysInMonth, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
-import { Download, Clock } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 const HOURS_PER_STATUS: { [key in AttendanceStatus | 'N/A']: number } = {
   present: 8,
@@ -42,15 +42,33 @@ const HOURS_PER_STATUS: { [key in AttendanceStatus | 'N/A']: number } = {
   'N/A': 0,
 };
 
+type ReportRow = Personnel & {
+    dailyHours: number[];
+    totalHours: number;
+};
+
 export default function HoursReportPage() {
-  const { personnel, attendance, missions } = useApp();
+  const { personnel, getPersonnelStatusForDateRange } = useApp();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
-  const [reportData, setReportData] = useState<any[]>([]);
+  const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [daysOfMonth, setDaysOfMonth] = useState<Date[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const reportTableRef = useRef<HTMLDivElement>(null);
 
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 24; i++) { 
+        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        options.push({
+            value: format(date, 'yyyy-MM'),
+            label: format(date, 'MMMM yyyy', { locale: fr }),
+        });
+    }
+    return options;
+  }, []);
+  
   const handleGenerateReport = () => {
     const year = parseInt(selectedMonth.split('-')[0]);
     const month = parseInt(selectedMonth.split('-')[1]) - 1;
@@ -62,50 +80,22 @@ export default function HoursReportPage() {
     );
     setDaysOfMonth(days);
 
-    const data = personnel.map(person => {
-      let totalHours = 0;
-      const personAttendance = days.map(day => {
-        const dayString = format(day, 'yyyy-MM-dd');
-        
-        let status: AttendanceStatus | 'N/A' = 'N/A';
-        const record = attendance.find(
-          a => a.personnelId === person.id && a.date === dayString
-        );
+    const startDate = format(days[0], 'yyyy-MM-dd');
+    const endDate = format(days[days.length - 1], 'yyyy-MM-dd');
 
-        if(record) {
-            status = record.status;
-        } else {
-            const missionRecord = attendance.find(a => 
-                a.personnelId === person.id && a.status === 'mission' && a.date === dayString && a.missionId
-            );
-            const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
-            if(activeMission) {
-                status = 'mission';
-            } else {
-                const onPermission = attendance.some(a => {
-                    if (a.personnelId === person.id && a.permissionDuration?.start && a.permissionDuration?.end) {
-                        try {
-                            const start = startOfDay(parseISO(a.permissionDuration.start));
-                            const end = startOfDay(parseISO(a.permissionDuration.end));
-                            return isWithinInterval(startOfDay(day), { start, end });
-                        } catch { return false }
-                    }
-                    return false;
-                });
-                if(onPermission) {
-                    status = 'permission';
-                } else {
-                    status = 'N/A'; // Default to N/A
-                }
-            }
-        }
+    const data: ReportRow[] = personnel.map(person => {
+        const personAttendance = getPersonnelStatusForDateRange(person.id, startDate, endDate);
         
-        const hours = HOURS_PER_STATUS[status];
-        totalHours += hours;
-        return hours;
-      });
-      return { ...person, attendance: personAttendance, totalHours };
+        let totalHours = 0;
+        const dailyHours = personAttendance.map(dayStatus => {
+            const hours = HOURS_PER_STATUS[dayStatus.status || 'N/A'];
+            totalHours += hours;
+            return hours;
+        });
+
+        return { ...person, dailyHours, totalHours };
     });
+
     setReportData(data);
   };
   
@@ -164,19 +154,6 @@ export default function HoursReportPage() {
         setIsExporting(false);
     }
   };
-  
-  const monthOptions = useMemo(() => {
-    const options = [];
-    const today = new Date();
-    for (let i = 0; i < 24; i++) { 
-        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        options.push({
-            value: format(date, 'yyyy-MM'),
-            label: format(date, 'MMMM yyyy', { locale: fr }),
-        });
-    }
-    return options;
-  }, []);
 
   const totalMonthlyHours = useMemo(() => {
     return reportData.reduce((acc, person) => acc + person.totalHours, 0);
@@ -230,7 +207,7 @@ export default function HoursReportPage() {
                 {reportData.map(person => (
                   <TableRow key={person.id}>
                     <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
-                    {person.attendance.map((hours: number, index: number) => (
+                    {person.dailyHours.map((hours: number, index: number) => (
                       <TableCell key={index} className="text-center">
                         {hours > 0 ? hours : <span className="text-muted-foreground">-</span>}
                       </TableCell>

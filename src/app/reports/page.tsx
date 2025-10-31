@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useApp } from '@/context/app-provider';
-import type { AttendanceStatus } from '@/types';
+import type { AttendanceStatus, Personnel, PersonnelDailyStatus } from '@/types';
 import {
   Table,
   TableBody,
@@ -26,19 +26,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { getDaysInMonth, format, isWithinInterval, startOfDay, parseISO } from 'date-fns';
+import { getDaysInMonth, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
 import { Download } from 'lucide-react';
 
+type ReportRow = Personnel & {
+  attendance: PersonnelDailyStatus[];
+  summary: {
+    present: number;
+    absent: number;
+    mission: number;
+    permission: number;
+  };
+};
+
 const statusIcons: { [key in AttendanceStatus | 'N/A']: string } = {
   present: '✔️',
   absent: '❌',
   mission: '✈️',
   permission: '🗓️',
-  'N/A': '-'
+  'N/A': '-',
 };
 
 const statusTooltips: { [key in AttendanceStatus | 'N/A']: string } = {
@@ -46,18 +56,30 @@ const statusTooltips: { [key in AttendanceStatus | 'N/A']: string } = {
   absent: 'Absent',
   mission: 'En Mission',
   permission: 'En Permission',
-  'N/A': 'Non Renseigné'
+  'N/A': 'Non Renseigné',
 };
 
 export default function ReportsPage() {
-  const { personnel, attendance, missions } = useApp();
+  const { personnel, getPersonnelStatusForDateRange } = useApp();
   const { toast } = useToast();
   const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), 'yyyy-MM'));
-  const [reportData, setReportData] = useState<any[]>([]);
+  const [reportData, setReportData] = useState<ReportRow[]>([]);
   const [daysOfMonth, setDaysOfMonth] = useState<Date[]>([]);
   const [isExporting, setIsExporting] = useState(false);
   const reportContainerRef = useRef<HTMLDivElement>(null);
 
+  const monthOptions = useMemo(() => {
+    const options = [];
+    const today = new Date();
+    for (let i = 0; i < 24; i++) {
+      const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
+      options.push({
+        value: format(date, 'yyyy-MM'),
+        label: format(date, 'MMMM yyyy', { locale: fr }),
+      });
+    }
+    return options;
+  }, []);
 
   const handleGenerateReport = () => {
     const year = parseInt(selectedMonth.split('-')[0]);
@@ -70,45 +92,22 @@ export default function ReportsPage() {
     );
     setDaysOfMonth(days);
 
-    const data = personnel.map(person => {
-      const personAttendance = days.map(day => {
-        const dayString = format(day, 'yyyy-MM-dd');
-        
-        let record = attendance.find(
-          a => a.personnelId === person.id && a.date === dayString
-        );
+    const startDate = format(days[0], 'yyyy-MM-dd');
+    const endDate = format(days[days.length - 1], 'yyyy-MM-dd');
 
-        if (record) {
-          return record.status;
-        }
-
-        const missionRecord = attendance.find(a => 
-            a.personnelId === person.id && a.status === 'mission' && a.date === dayString && a.missionId
-        );
-        const activeMission = missionRecord ? missions.find(m => m.id === missionRecord.missionId && m.status === 'active') : undefined;
-        if(activeMission) return 'mission';
-
-        const onPermission = attendance.some(a => {
-            if (a.personnelId === person.id && a.permissionDuration?.start && a.permissionDuration?.end) {
-                try {
-                    const start = startOfDay(parseISO(a.permissionDuration.start));
-                    const end = startOfDay(parseISO(a.permissionDuration.end));
-                    return isWithinInterval(startOfDay(day), { start, end });
-                } catch { return false }
-            }
-            return false;
-        });
-        if(onPermission) return 'permission';
-        
-        return 'N/A';
-      });
-
-      const summary = {
-        present: personAttendance.filter(s => s === 'present').length,
-        absent: personAttendance.filter(s => s === 'absent').length,
-        mission: personAttendance.filter(s => s === 'mission').length,
-        permission: personAttendance.filter(s => s === 'permission').length,
-      };
+    const data: ReportRow[] = personnel.map(person => {
+      const personAttendance = getPersonnelStatusForDateRange(person.id, startDate, endDate);
+      
+      const summary = personAttendance.reduce(
+        (acc, day) => {
+          if (day.status === 'present') acc.present++;
+          else if (day.status === 'absent') acc.absent++;
+          else if (day.status === 'mission') acc.mission++;
+          else if (day.status === 'permission') acc.permission++;
+          return acc;
+        },
+        { present: 0, absent: 0, mission: 0, permission: 0 }
+      );
 
       return { ...person, attendance: personAttendance, summary };
     });
@@ -175,19 +174,6 @@ export default function ReportsPage() {
         setIsExporting(false);
     }
   };
-  
-  const monthOptions = useMemo(() => {
-    const options = [];
-    const today = new Date();
-    for (let i = 0; i < 24; i++) { // Increased to 24 months
-        const date = new Date(today.getFullYear(), today.getMonth() - i, 1);
-        options.push({
-            value: format(date, 'yyyy-MM'),
-            label: format(date, 'MMMM yyyy', { locale: fr }),
-        });
-    }
-    return options;
-  }, []);
 
   return (
     <Card>
@@ -237,9 +223,9 @@ export default function ReportsPage() {
                   {reportData.map(person => (
                     <TableRow key={person.id}>
                       <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
-                      {person.attendance.map((status: AttendanceStatus | 'N/A', index: number) => (
-                        <TableCell key={index} className="text-center">
-                           <span title={statusTooltips[status]}>{statusIcons[status]}</span>
+                      {person.attendance.map((dayStatus) => (
+                        <TableCell key={dayStatus.date} className="text-center">
+                           <span title={statusTooltips[dayStatus.status || 'N/A']}>{statusIcons[dayStatus.status || 'N/A']}</span>
                         </TableCell>
                       ))}
                     </TableRow>
