@@ -217,8 +217,8 @@ export default function AttendancePage() {
           </CardHeader>
           <CardContent>
             {isValidated && (
-              <Alert className="mb-6 bg-yellow-50 border-yellow-200 text-yellow-800">
-                  <Lock className="h-4 w-4 !text-yellow-600" />
+              <Alert className="mb-6 bg-blue-50 border-blue-200 text-blue-800">
+                  <Lock className="h-4 w-4 !text-blue-600" />
                   <AlertTitle className="font-bold">Pointage Verrouillé</AlertTitle>
                   <AlertDescription>
                       Le pointage pour aujourd'hui a été validé et ne peut plus être modifié.
