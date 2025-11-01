@@ -105,28 +105,6 @@ export default function DashboardPage() {
                     </div>
 
                     <div className="col-span-12 mt-5">
-                        <div className="grid gap-2 grid-cols-1 lg:grid-cols-2">
-                             <Card>
-                                <CardHeader>
-                                    <CardTitle>Répartition du Statut</CardTitle>
-                                </CardHeader>
-                                <CardContent>
-                                    <ResponsiveContainer width="100%" height={350}>
-                                        <PieChart>
-                                            <Pie data={pieChartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label>
-                                                {pieChartData.map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
-
-                    <div className="col-span-12 mt-5">
                         <Card>
                           <CardHeader>
                             <CardTitle>Personnel Récent</CardTitle>
