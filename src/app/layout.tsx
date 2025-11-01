@@ -6,7 +6,7 @@ import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { AppSidebar } from '@/components/app-sidebar';
 import { AppHeader } from '@/components/app-header';
-import { Sidebar, SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -21,20 +21,23 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" className="dark">
+        <head>
+            <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
+        </head>
       <body className={inter.className}>
         <FirebaseClientProvider>
           <AppProvider>
             <SidebarProvider>
-              <Sidebar>
-                <AppSidebar />
-              </Sidebar>
-              <SidebarInset>
-                <AppHeader />
-                <main className="p-4 lg:p-6">{children}</main>
-              </SidebarInset>
+                <div className="flex h-screen bg-gray-900 text-gray-50">
+                    <AppSidebar />
+                    <div className="flex flex-col flex-1 w-full overflow-y-auto">
+                        <AppHeader />
+                        <main>{children}</main>
+                    </div>
+                </div>
+                <Toaster />
             </SidebarProvider>
-            <Toaster />
           </AppProvider>
         </FirebaseClientProvider>
       </body>
