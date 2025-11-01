@@ -2,9 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 import {
-  BarChart3,
   CalendarCheck2,
   Users,
   FileText,
@@ -12,10 +10,6 @@ import {
   Car,
   Clock,
   Home,
-  ChevronDown,
-  ChevronRight,
-  TrendingUp,
-  TrendingDown,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -33,7 +27,6 @@ const menuItems = [
 
 function AppSidebarContent() {
     const pathname = usePathname();
-    const [openSubmenu, setOpenSubmenu] = useState(false);
 
     return (
         <div className="py-4 text-gray-400">
@@ -60,36 +53,6 @@ function AppSidebarContent() {
                         </Link>
                     </li>
                 ))}
-                
-                <li className="relative px-2 py-1">
-                    <div
-                        className="inline-flex items-center justify-between w-full text-base font-semibold transition-colors duration-150 text-gray-400 hover:text-gray-200 cursor-pointer"
-                        onClick={() => setOpenSubmenu(!openSubmenu)}
-                    >
-                        <span className="inline-flex items-center text-sm font-semibold">
-                            <BarChart3 className="h-6 w-6" />
-                            <span className="ml-4">Statistiques</span>
-                        </span>
-                        {openSubmenu ? <ChevronDown className="ml-1 w-4 h-4" /> : <ChevronRight className="ml-1 w-4 h-4" />}
-                    </div>
-
-                    {openSubmenu && (
-                        <ul className="p-2 mt-2 space-y-2 overflow-hidden text-sm font-medium rounded-md shadow-inner bg-gray-700" aria-label="submenu">
-                            <li className="px-2 py-1 transition-colors duration-150 text-gray-300 hover:text-white">
-                                <Link href="/stats/page1" className="flex items-center w-full">
-                                    <TrendingUp className="h-5 w-5" />
-                                    <span className="ml-2">Statistiques 1</span>
-                                </Link>
-                            </li>
-                            <li className="px-2 py-1 transition-colors duration-150 text-gray-300 hover:text-white">
-                                <Link href="/stats/page2" className="flex items-center w-full">
-                                    <TrendingDown className="h-5 w-5" />
-                                    <span className="ml-2">Statistiques 2</span>
-                                </Link>
-                            </li>
-                        </ul>
-                    )}
-                </li>
             </ul>
         </div>
     )
