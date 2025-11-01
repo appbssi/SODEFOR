@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { Sidebar, useSidebar } from './ui/sidebar';
+import { useSidebar } from './ui/sidebar';
 
 const menuItems = [
   { href: '/dashboard', label: 'Tableau de Bord', icon: Home },
@@ -35,7 +35,7 @@ function AppSidebarContent() {
 
     return (
         <div className="text-white">
-            <div className="flex p-2 bg-gray-800">
+            <div className="flex p-2  bg-gray-800">
                 <div className="flex py-3 px-2 items-center">
                     <p className="text-2xl text-green-500 font-semibold">SODEFOR</p>
                 </div>
@@ -50,21 +50,19 @@ function AppSidebarContent() {
                         height={96}
                         data-ai-hint="user avatar"
                     />
-                    <p className="font-bold text-base text-gray-400 pt-2 text-center w-24">Utilisateur</p>
+                    <p className="font-bold text-base  text-gray-400 pt-2 text-center w-24">Utilisateur</p>
                 </div>
             </div>
             <div>
                 <ul className="mt-6 leading-10">
                     {menuItems.map(item => (
-                        <li key={item.href} className="relative px-2 py-1">
-                            <Link href={item.href} legacyBehavior>
-                                <a className={cn(
+                        <li key={item.href} className="relative px-2 py-1 ">
+                            <Link href={item.href} className={cn(
                                     "inline-flex items-center w-full text-sm font-semibold transition-colors duration-150 cursor-pointer",
                                     pathname.startsWith(item.href) ? "text-primary" : "text-white hover:text-primary"
                                 )}>
                                     <item.icon className="h-6 w-6" />
                                     <span className="ml-4">{item.label}</span>
-                                </a>
                             </Link>
                         </li>
                     ))}
