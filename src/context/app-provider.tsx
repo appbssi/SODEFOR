@@ -13,6 +13,7 @@ import {
 } from '@/firebase/non-blocking-updates';
 import { getDaysBetweenDates } from '@/lib/utils';
 import { isWithinInterval, parseISO, startOfDay, format } from 'date-fns';
+import Link from 'next/link';
 
 interface Summary {
     totalPersonnel: number;
