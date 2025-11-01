@@ -111,8 +111,20 @@ export default function HoursReportPage() {
     
     setIsExporting(true);
 
+    const style = document.createElement('style');
+    style.id = 'print-styles-hours';
+    style.innerHTML = `
+      #report-table-hours table { font-size: 9px; }
+      #report-table-hours th, #report-table-hours td { padding: 2px 4px; }
+      #report-table-hours th { min-width: auto !important; }
+    `;
+    document.head.appendChild(style);
+
     try {
-        const canvas = await html2canvas(reportTableRef.current, { scale: 2 });
+        const canvas = await html2canvas(reportTableRef.current, { 
+            scale: 2,
+            backgroundColor: '#ffffff'
+        });
         const imgData = canvas.toDataURL('image/png');
         
         const pdf = new jsPDF({
@@ -134,9 +146,9 @@ export default function HoursReportPage() {
         const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
         let position = 25;
         
-        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
+        pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight, undefined, 'FAST');
         
-        pdf.save(`bilan_heures_${monthLabel.replace(' ', '_')}.pdf`);
+        pdf.save(`bilan_heures_${monthLabel.replace(/\s/g, '_')}.pdf`);
         
         toast({
             title: 'Exportation réussie',
@@ -151,6 +163,10 @@ export default function HoursReportPage() {
             variant: 'destructive',
         });
     } finally {
+        const styleElement = document.getElementById('print-styles-hours');
+        if (styleElement) {
+            document.head.removeChild(styleElement);
+        }
         setIsExporting(false);
     }
   };
@@ -189,7 +205,7 @@ export default function HoursReportPage() {
         </div>
 
         {reportData.length > 0 ? (
-          <div ref={reportTableRef} id="report-table" className="overflow-x-auto relative border rounded-lg bg-card p-4">
+          <div ref={reportTableRef} id="report-table-hours" className="overflow-x-auto relative border rounded-lg bg-card p-4">
              <h3 className="text-lg font-semibold text-center mb-4">
                 Bilan des Heures - {monthOptions.find(m => m.value === selectedMonth)?.label}
             </h3>
