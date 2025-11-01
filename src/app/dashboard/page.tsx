@@ -106,21 +106,6 @@ export default function DashboardPage() {
 
                     <div className="col-span-12 mt-5">
                         <div className="grid gap-2 grid-cols-1 lg:grid-cols-2">
-                           <Card>
-                                <CardHeader>
-                                    <CardTitle>Activité Mensuelle</CardTitle>
-                                </CardHeader>
-                                <CardContent className="pl-2">
-                                    <ResponsiveContainer width="100%" height={350}>
-                                        <RechartsBarChart data={chartData}>
-                                            <XAxis dataKey="name" stroke="#888888" fontSize={12} tickLine={false} axisLine={false} />
-                                            <YAxis stroke="#888888" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
-                                            <Tooltip />
-                                            <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                                        </RechartsBarChart>
-                                    </ResponsiveContainer>
-                                </CardContent>
-                            </Card>
                              <Card>
                                 <CardHeader>
                                     <CardTitle>Répartition du Statut</CardTitle>
