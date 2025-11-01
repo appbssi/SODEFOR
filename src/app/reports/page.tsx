@@ -234,28 +234,28 @@ export default function ReportsPage() {
               </Table>
             </div>
             
-            <div id="report-table-summary" className="border rounded-lg bg-card p-4">
-                <h3 className="text-lg font-semibold text-center mb-4">
+            <div id="report-table-summary" className="border rounded-lg bg-card p-2">
+                <h3 className="text-base font-semibold text-center mb-2">
                     Récapitulatif Mensuel - {monthOptions.find(m => m.value === selectedMonth)?.label}
                 </h3>
-                <Table>
+                <Table className="text-xs">
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[250px]">Nom</TableHead>
-                            <TableHead className="text-center">Présences</TableHead>
-                            <TableHead className="text-center">Absences</TableHead>
-                            <TableHead className="text-center">Missions</TableHead>
-                            <TableHead className="text-center">Permissions</TableHead>
+                            <TableHead className="w-[180px] p-2">Nom</TableHead>
+                            <TableHead className="text-center p-2">Présences</TableHead>
+                            <TableHead className="text-center p-2">Absences</TableHead>
+                            <TableHead className="text-center p-2">Missions</TableHead>
+                            <TableHead className="text-center p-2">Permissions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reportData.map(person => (
                             <TableRow key={person.id}>
-                                <TableCell className="font-medium">{person.lastName} {person.firstName}</TableCell>
-                                <TableCell className="text-center font-semibold">{person.summary.present}</TableCell>
-                                <TableCell className="text-center font-semibold">{person.summary.absent}</TableCell>
-                                <TableCell className="text-center font-semibold">{person.summary.mission}</TableCell>
-                                <TableCell className="text-center font-semibold">{person.summary.permission}</TableCell>
+                                <TableCell className="font-medium p-2">{person.lastName} {person.firstName}</TableCell>
+                                <TableCell className="text-center font-semibold p-2">{person.summary.present}</TableCell>
+                                <TableCell className="text-center font-semibold p-2">{person.summary.absent}</TableCell>
+                                <TableCell className="text-center font-semibold p-2">{person.summary.mission}</TableCell>
+                                <TableCell className="text-center font-semibold p-2">{person.summary.permission}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
