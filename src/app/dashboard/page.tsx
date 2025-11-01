@@ -104,55 +104,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
 
-                    <div className="col-span-12 mt-5">
-                        <Card>
-                          <CardHeader>
-                            <CardTitle>Personnel Récent</CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Nom du Produit</TableHead>
-                                    <TableHead>Matricule</TableHead>
-                                    <TableHead>Statut</TableHead>
-                                    <TableHead>Action</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                    {useApp().personnel.slice(0, 3).map((p) => (
-                                        <TableRow key={p.id}>
-                                            <TableCell>
-                                                <p>{p.lastName} {p.firstName}</p>
-                                                <p className="text-xs text-gray-400">{p.rank}</p>
-                                            </TableCell>
-                                            <TableCell>{p.matricule}</TableCell>
-                                            <TableCell>
-                                                <div className="flex items-center text-green-500">
-                                                    <UserCheck className="w-5 h-5 mr-1" />
-                                                    <p>Actif</p>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell>
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon">
-                                                            <MoreHorizontal className="h-5 w-5" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent>
-                                                        <DropdownMenuItem>Modifier</DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-red-500">Supprimer</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                                </TableBody>
-                              </Table>
-                          </CardContent>
-                        </Card>
-                    </div>
+                    
                 </div>
             </div>
         </div>
