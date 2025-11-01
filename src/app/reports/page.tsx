@@ -114,7 +114,7 @@ export default function ReportsPage() {
     setReportData(data);
   };
   
-  const handleExportPDF = async () => {
+    const handleExportPDF = async () => {
     if (!reportContainerRef.current || reportData.length === 0) {
       toast({
         title: 'Aucun rapport à exporter',
@@ -123,55 +123,75 @@ export default function ReportsPage() {
       });
       return;
     }
-    
+
     setIsExporting(true);
+    
+    // Create a style element with print-specific styles
+    const style = document.createElement('style');
+    style.id = 'print-styles';
+    style.innerHTML = `
+      #report-table-details table, #report-table-summary table {
+        font-size: 8px;
+      }
+      #report-table-details th, #report-table-details td,
+      #report-table-summary th, #report-table-summary td {
+        padding: 2px 4px;
+      }
+      #report-table-details th {
+        min-width: 20px !important;
+      }
+    `;
+    document.head.appendChild(style);
+
 
     try {
-        const canvas = await html2canvas(reportContainerRef.current, { scale: 2 });
-        const imgData = canvas.toDataURL('image/png');
-        
-        const pdf = new jsPDF({
-            orientation: 'landscape',
-            unit: 'mm',
-            format: 'a4',
-        });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Rapport';
+      const canvas = await html2canvas(reportContainerRef.current, {
+        scale: 2,
+        backgroundColor: '#ffffff', // Ensure a white background for consistency
+      });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      
+      const monthLabel = monthOptions.find(m => m.value === selectedMonth)?.label || 'Rapport';
 
-        pdf.setFontSize(16);
-        pdf.text(`Rapport de Présence - ${monthLabel}`, pdfWidth / 2, 15, { align: 'center' });
-        
-        const imgProps = pdf.getImageProperties(imgData);
-        const imgWidth = pdfWidth - 20; // margins
-        const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
-        let position = 20;
-
-        if (imgHeight > pdfHeight - 30) {
-           position = 10;
-           pdf.addImage(imgData, 'PNG', 10, position, imgWidth, pdfHeight - 20);
-        } else {
-            pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight);
-        }
-        
-        pdf.save(`rapport_presence_${monthLabel.replace(' ', '_')}.pdf`);
-        
-        toast({
-            title: 'Exportation réussie',
-            description: 'Le rapport a été téléchargé en PDF.',
-        });
-
+      pdf.setFontSize(16);
+      pdf.text(`Rapport de Présence - ${monthLabel}`, pdfWidth / 2, 15, { align: 'center' });
+      
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pdfWidth - 20; // margins
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+      let position = 20;
+      
+      pdf.addImage(imgData, 'PNG', 10, position, imgWidth, imgHeight > (pdfHeight - 30) ? pdfHeight - 30 : imgHeight, undefined, 'FAST');
+      
+      pdf.save(`rapport_presence_${monthLabel.replace(/\s/g, '_')}.pdf`);
+      
+      toast({
+        title: 'Exportation réussie',
+        description: 'Le rapport a été téléchargé en PDF.',
+      });
     } catch (error) {
-        console.error("Error exporting to PDF:", error);
-        toast({
-            title: 'Erreur d\'exportation',
-            description: 'Une erreur est survenue lors de la création du PDF.',
-            variant: 'destructive',
-        });
+      console.error("Error exporting to PDF:", error);
+      toast({
+        title: 'Erreur d\'exportation',
+        description: 'Une erreur est survenue lors de la création du PDF.',
+        variant: 'destructive',
+      });
     } finally {
-        setIsExporting(false);
+      // Remove the style element after exporting
+      const styleElement = document.getElementById('print-styles');
+      if (styleElement) {
+        document.head.removeChild(styleElement);
+      }
+      setIsExporting(false);
     }
   };
 
@@ -205,26 +225,26 @@ export default function ReportsPage() {
         </div>
 
         {reportData.length > 0 ? (
-          <div ref={reportContainerRef} className="space-y-8">
-            <div id="report-table-details" className="overflow-x-auto relative border rounded-lg bg-card p-4">
-              <h3 className="text-lg font-semibold text-center mb-4">
+          <div ref={reportContainerRef} className="space-y-8 bg-card p-4">
+            <div id="report-table-details" className="overflow-x-auto relative border rounded-lg bg-card">
+              <h3 className="text-lg font-semibold text-center my-2">
                   Détails de Présence - {monthOptions.find(m => m.value === selectedMonth)?.label}
               </h3>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 w-[200px] p-2">Nom</TableHead>
+                    <TableHead className="sticky left-0 bg-card z-10 w-[200px] p-1 text-xs">Nom</TableHead>
                     {daysOfMonth.map(day => (
-                      <TableHead key={day.toString()} className="text-center min-w-[30px] p-1">{format(day, 'd')}</TableHead>
+                      <TableHead key={day.toString()} className="text-center min-w-[30px] p-1 text-xs">{format(day, 'd')}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reportData.map(person => (
                     <TableRow key={person.id}>
-                      <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap p-2">{person.lastName} {person.firstName}</TableCell>
+                      <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap p-1 text-xs">{person.lastName} {person.firstName}</TableCell>
                       {person.attendance.map((dayStatus) => (
-                        <TableCell key={dayStatus.date} className="text-center p-1">
+                        <TableCell key={dayStatus.date} className="text-center p-1 text-xs">
                            <span title={statusTooltips[dayStatus.status || 'N/A']}>{statusIcons[dayStatus.status || 'N/A']}</span>
                         </TableCell>
                       ))}
@@ -234,28 +254,28 @@ export default function ReportsPage() {
               </Table>
             </div>
             
-            <div id="report-table-summary" className="border rounded-lg bg-card p-2">
-                <h3 className="text-base font-semibold text-center mb-2">
+            <div id="report-table-summary" className="border rounded-lg bg-card">
+                <h3 className="text-base font-semibold text-center my-2">
                     Récapitulatif Mensuel - {monthOptions.find(m => m.value === selectedMonth)?.label}
                 </h3>
                 <Table className="text-xs">
                     <TableHeader>
                         <TableRow>
-                            <TableHead className="w-[180px] p-2">Nom</TableHead>
-                            <TableHead className="text-center p-2">Présences</TableHead>
-                            <TableHead className="text-center p-2">Absences</TableHead>
-                            <TableHead className="text-center p-2">Missions</TableHead>
-                            <TableHead className="text-center p-2">Permissions</TableHead>
+                            <TableHead className="w-[180px] p-1 text-xs">Nom</TableHead>
+                            <TableHead className="text-center p-1 text-xs">Présences</TableHead>
+                            <TableHead className="text-center p-1 text-xs">Absences</TableHead>
+                            <TableHead className="text-center p-1 text-xs">Missions</TableHead>
+                            <TableHead className="text-center p-1 text-xs">Permissions</TableHead>
                         </TableRow>
                     </TableHeader>
                     <TableBody>
                         {reportData.map(person => (
                             <TableRow key={person.id}>
-                                <TableCell className="font-medium p-2">{person.lastName} {person.firstName}</TableCell>
-                                <TableCell className="text-center font-semibold p-2">{person.summary.present}</TableCell>
-                                <TableCell className="text-center font-semibold p-2">{person.summary.absent}</TableCell>
-                                <TableCell className="text-center font-semibold p-2">{person.summary.mission}</TableCell>
-                                <TableCell className="text-center font-semibold p-2">{person.summary.permission}</TableCell>
+                                <TableCell className="font-medium p-1 text-xs">{person.lastName} {person.firstName}</TableCell>
+                                <TableCell className="text-center font-semibold p-1 text-xs">{person.summary.present}</TableCell>
+                                <TableCell className="text-center font-semibold p-1 text-xs">{person.summary.absent}</TableCell>
+                                <TableCell className="text-center font-semibold p-1 text-xs">{person.summary.mission}</TableCell>
+                                <TableCell className="text-center font-semibold p-1 text-xs">{person.summary.permission}</TableCell>
                             </TableRow>
                         ))}
                     </TableBody>
