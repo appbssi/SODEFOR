@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
-import { Sidebar, SidebarProvider, useSidebar } from './ui/sidebar';
+import { Sidebar, useSidebar } from './ui/sidebar';
 
 const menuItems = [
   { href: '/dashboard', label: 'Tableau de Bord', icon: Home },
@@ -38,7 +38,6 @@ function AppSidebarContent() {
             <div className="flex p-2 bg-gray-800">
                 <div className="flex py-3 px-2 items-center">
                     <p className="text-2xl text-green-500 font-semibold">SODEFOR</p>
-                    <p className="ml-2 font-semibold italic">DASHBOARD</p>
                 </div>
             </div>
             <div className="flex justify-center mt-4">
@@ -89,7 +88,8 @@ function AppSidebarContent() {
                                         <div className="px-1 hover:text-gray-800 hover:bg-gray-100 rounded-md">
                                             <div className="flex items-center">
                                                 <Home className="h-5 w-5" />
-                                                <a href="#" className="w-full ml-2 text-sm font-semibold text-white hover:text-gray-800">Item 1</a>
+                                                <a href="#" className="w-full ml-2 text-sm font-semibold text-white hover:text-gray-800">Item
+                                                    1</a>
                                             </div>
                                         </div>
                                     </li>
@@ -104,9 +104,20 @@ function AppSidebarContent() {
 }
 
 export function AppSidebar() {
+    const { openMobile, setOpenMobile } = useSidebar();
   return (
-    <Sidebar className="z-20 flex-shrink-0 hidden w-60 pl-2 overflow-y-auto bg-gray-800 md:block" collapsible="offcanvas" side="left">
-        <AppSidebarContent />
-    </Sidebar>
+    <>
+        <div x-show="isSideMenuOpen" className="fixed inset-0 z-10 flex items-end bg-black bg-opacity-50 sm:items-center sm:justify-center"></div>
+        <aside
+            className="fixed inset-y-0 z-20 flex-shrink-0 w-64 mt-16 overflow-y-auto bg-gray-900 md:hidden"
+            style={{ display: openMobile ? 'block' : 'none' }}
+            onClick={() => setOpenMobile(false)}
+        >
+            <AppSidebarContent />
+        </aside>
+        <aside className="z-20 flex-shrink-0 hidden w-60 pl-2 overflow-y-auto bg-gray-800 md:block">
+            <AppSidebarContent />
+        </aside>
+    </>
   );
 }
