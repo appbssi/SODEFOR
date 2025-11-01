@@ -21,7 +21,7 @@ export function AppHeader() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
 
   return (
-     <header className="z-40 py-4 bg-gray-800">
+     <header className="z-40 py-4 bg-white shadow-sm dark:bg-gray-800">
         <div className="flex items-center justify-between h-8 px-6 mx-auto">
             {/* Mobile hamburger */}
             <Button
@@ -30,7 +30,7 @@ export function AppHeader() {
                 onClick={toggleSidebar}
                 aria-label="Menu"
             >
-                <Menu className="w-6 h-6 text-white" />
+                <Menu className="w-6 h-6 text-primary" />
             </Button>
 
             {/* Empty div to push icons to the right */}
@@ -46,8 +46,8 @@ export function AppHeader() {
                                 <span aria-hidden="true" className="absolute top-0 right-0 inline-block w-3 h-3 transform translate-x-1 -translate-y-1 bg-red-600 border-2 border-white rounded-full"></span>
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="absolute right-0 w-56 p-2 mt-2 space-y-2 text-gray-600 bg-green-400 border border-green-500 rounded-md shadow-md">
-                            <DropdownMenuItem className="text-white inline-flex items-center justify-between w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100 hover:text-gray-800">
+                        <DropdownMenuContent className="absolute right-0 w-56 p-2 mt-2 space-y-2 text-gray-600 bg-white border rounded-md shadow-md" align="end">
+                            <DropdownMenuItem className="inline-flex items-center justify-between w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100">
                                 <span>Messages</span>
                                 <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-red-600 bg-red-100 rounded-full">13</span>
                             </DropdownMenuItem>
@@ -63,12 +63,12 @@ export function AppHeader() {
                                 <Settings className="h-6 w-6" />
                             </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent className="absolute right-0 w-56 p-2 mt-2 space-y-2 text-gray-600 bg-green-400 border border-green-500 rounded-md shadow-md" align="end">
-                            <DropdownMenuItem className="text-white inline-flex items-center w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100 hover:text-gray-800">
+                        <DropdownMenuContent className="absolute right-0 w-56 p-2 mt-2 space-y-2 text-gray-600 bg-white border rounded-md shadow-md" align="end">
+                            <DropdownMenuItem className="inline-flex items-center w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100">
                                 <User className="w-5 h-5 mr-2" />
                                 <span>Profile</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem className="text-white inline-flex items-center w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100 hover:text-gray-800">
+                            <DropdownMenuItem className="inline-flex items-center w-full px-2 py-1 text-sm font-semibold transition-colors duration-150 rounded-md hover:bg-gray-100">
                                 <LogOut className="w-5 h-5 mr-2" />
                                 <span>Log out</span>
                             </DropdownMenuItem>

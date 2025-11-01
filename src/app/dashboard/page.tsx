@@ -2,44 +2,8 @@
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useApp } from '@/context/app-provider';
-import { Users, UserCheck, UserX, Plane, UserMinus, ShoppingCart, BarChart, Activity, Wallet } from 'lucide-react';
+import { Users, UserCheck, UserX, Plane } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MoreHorizontal } from 'lucide-react';
-import { Bar, BarChart as RechartsBarChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Pie, PieChart, Cell } from 'recharts';
-
-
-const chartData = [
-  { name: 'Jan', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Feb', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Mar', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Apr', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'May', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Jun', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Jul', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Aug', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Sep', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Oct', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Nov', total: Math.floor(Math.random() * 5000) + 1000 },
-  { name: 'Dec', total: Math.floor(Math.random() * 5000) + 1000 },
-];
-
-const pieChartData = [
-    { name: 'Présents', value: 400 },
-    { name: 'Absents', value: 30 },
-    { name: 'Missions', value: 50 },
-    { name: 'Permissions', value: 20 },
-];
-const COLORS = ['#10B981', '#F87171', '#60A5FA', '#FBBF24'];
-
 
 export default function DashboardPage() {
   const { summary, loading } = useApp();
@@ -103,8 +67,6 @@ export default function DashboardPage() {
                             ))}
                         </div>
                     </div>
-
-                    
                 </div>
             </div>
         </div>

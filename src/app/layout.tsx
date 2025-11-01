@@ -21,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className="dark">
+    <html lang="fr" className="">
         <head>
             <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v2.x.x/dist/alpine.min.js" defer></script>
         </head>
@@ -29,7 +29,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           <AppProvider>
             <SidebarProvider>
-                <div className="flex h-screen bg-gray-900 text-gray-50">
+                <div className="flex h-screen bg-gray-50 text-gray-800">
                     <AppSidebar />
                     <div className="flex flex-col flex-1 w-full overflow-y-auto">
                         <AppHeader />
