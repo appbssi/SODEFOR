@@ -213,18 +213,18 @@ export default function ReportsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="sticky left-0 bg-card z-10 w-[200px]">Nom</TableHead>
+                    <TableHead className="sticky left-0 bg-card z-10 w-[200px] p-2">Nom</TableHead>
                     {daysOfMonth.map(day => (
-                      <TableHead key={day.toString()} className="text-center min-w-[50px]">{format(day, 'd')}</TableHead>
+                      <TableHead key={day.toString()} className="text-center min-w-[30px] p-1">{format(day, 'd')}</TableHead>
                     ))}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {reportData.map(person => (
                     <TableRow key={person.id}>
-                      <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap">{person.lastName} {person.firstName}</TableCell>
+                      <TableCell className="font-medium sticky left-0 bg-card z-10 whitespace-nowrap p-2">{person.lastName} {person.firstName}</TableCell>
                       {person.attendance.map((dayStatus) => (
-                        <TableCell key={dayStatus.date} className="text-center">
+                        <TableCell key={dayStatus.date} className="text-center p-1">
                            <span title={statusTooltips[dayStatus.status || 'N/A']}>{statusIcons[dayStatus.status || 'N/A']}</span>
                         </TableCell>
                       ))}
