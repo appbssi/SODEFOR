@@ -33,20 +33,8 @@ export function AppHeader() {
                 <Menu className="w-6 h-6 text-white" />
             </Button>
 
-            {/* Search Input */}
-            <div className="flex justify-center flex-1 lg:mr-32">
-                <div className="relative w-full max-w-xl mr-6 focus-within:text-primary">
-                    <div className="absolute inset-y-0 flex items-center pl-2">
-                        <Search className="w-4 h-4" />
-                    </div>
-                    <Input
-                        className="w-full pl-8 pr-2 text-sm text-gray-700 placeholder-gray-600 bg-gray-100 border-0 rounded-md focus:placeholder-gray-500 focus:bg-white focus:border-primary focus:outline-none focus:shadow-outline-purple form-input"
-                        type="text"
-                        placeholder="Rechercher..."
-                        aria-label="Search"
-                    />
-                </div>
-            </div>
+            {/* Empty div to push icons to the right */}
+            <div className="flex-1"></div>
 
             <ul className="flex items-center flex-shrink-0 space-x-6">
                 {/* Notifications menu */}
